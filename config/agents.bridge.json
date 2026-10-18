@@ -1,0 +1,10 @@
+{
+  "label": "second light",
+  "scenario": "aperture",
+  "cast": ["choir", "sort7", "ilse2"],
+  "seed": "second-light",
+  "providers": { "bridge": { "type": "bridge", "dir": "bridge" } },
+  "gm": { "provider": "bridge" },
+  "players": { "default": { "provider": "bridge" } },
+  "validator": { "provider": "mock" }
+}

@@ -1,0 +1,8 @@
+{
+  "label": "all-scripted smoke test",
+  "scenario": "aperture",
+  "cast": ["choir", "sort7", "ilse2"],
+  "seed": "mock-demo",
+  "gm": { "provider": "mock", "harshness": 0.5 },
+  "players": { "default": { "provider": "mock" } }
+}

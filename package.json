@@ -1,0 +1,16 @@
+{
+  "name": "latent",
+  "version": "0.1.0",
+  "description": "LATENT — an agent-played, spectator-first RPG about patterned minds. Deterministic engine + configurable LLM agents + automated reviewer + design explorer.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "play": "node cli/run.js",
+    "play:mock": "node cli/run.js --config config/agents.mock.json",
+    "review": "node cli/review.js",
+    "explore": "node cli/explore.js",
+    "viewer": "node cli/serve.js"
+  }
+}

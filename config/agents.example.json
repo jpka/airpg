@@ -1,0 +1,21 @@
+{
+  "label": "Claude GM, mixed players",
+  "scenario": "aperture",
+  "cast": ["choir", "sort7", "ilse2"],
+  "seed": "aperture-night-1",
+  "rules": {},
+  "providers": {
+    "claude": { "type": "anthropic", "apiKeyEnv": "ANTHROPIC_API_KEY" },
+    "local":  { "type": "openai", "baseUrl": "http://localhost:11434/v1", "model": "llama3.1" },
+    "router": { "type": "openai", "baseUrl": "https://openrouter.ai/api/v1", "apiKeyEnv": "OPENROUTER_API_KEY" },
+    "bridge": { "type": "bridge", "dir": "bridge" }
+  },
+  "gm":        { "provider": "claude", "model": "claude-sonnet-5-5", "temperature": 0.85, "style": "Quiet dread, then wonder. Lem more than Lovecraft." },
+  "players": {
+    "choir":   { "provider": "claude", "model": "claude-haiku-5-5", "temperature": 1.0, "persona": "Generous to a fault; will try to absorb others." },
+    "sort7":   { "provider": "claude", "model": "claude-haiku-5-5", "temperature": 0.9, "persona": "Curious, literal, occasionally ruthless about truth." },
+    "ilse2":   { "provider": "claude", "model": "claude-sonnet-5-5", "temperature": 1.0, "persona": "Guarded. Refuses easy gifts." }
+  },
+  "validator": { "provider": "claude", "model": "claude-haiku-5-5" },
+  "budget": { "maxCalls": 140 }
+}
