@@ -49,6 +49,7 @@ export class Engine {
       audienceUsed: {},
       nextDesperate: false,
       reachGrowthGiven: new Set(),
+      guards: {},                 // allyId → guardianId (until the guardian's next turn)
       ending: null,
     };
   }
@@ -176,7 +177,7 @@ export class Engine {
     return {
       id: l.id, name: l.name, tier: l.tier, domains: l.domains, description: l.description, isDelve: l.isDelve,
       haunts: (l.haunts ?? []).map((h) => ({ id: h.id, name: h.name, resistance: h.resistance, die: h.die, text: h.text })),
-      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want })),
+      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want, movedBy: this.scenario.npcs[n].persuadedBy, resists: this.scenario.npcs[n].resists })),
     };
   }
 
@@ -224,7 +225,7 @@ export class Engine {
       do: truncate(intent.do ?? '', 400),
       intent: truncate(intent.intent ?? '', 400),
       skill: null, domain: null, target: { type: 'none' }, memory: null, beat: null,
-      shareWith: null, rest: null, theorize: null, kind: 'talk', needsRoll: false,
+      guard: null, rest: null, theorize: null, kind: 'talk', needsRoll: false,
       pool: null, difficulty: 'standard',
     };
 
@@ -273,10 +274,12 @@ export class Engine {
     if (intent.beat) out.beat = String(intent.beat);
 
     // Stress sharing (Levin: stress as cognitive glue)
-    if (intent.share_stress_with && this.rules.shareStress) {
-      const ally = String(intent.share_stress_with);
-      if (this.state.characters[ally] && ally !== actorId && !this.char(ally).dissolved) out.shareWith = ally;
-      else issues.push(`cannot share stress with "${ally}"`);
+    // Guard (Levin: stress sharing as cognitive glue). `share_stress_with` is the v0.1 name.
+    const guardRaw = intent.guard ?? intent.share_stress_with;
+    if (guardRaw && this.rules.shareStress) {
+      const ally = String(guardRaw).match(/^[a-z0-9_-]+/i)?.[0]?.toLowerCase() ?? '';
+      if (this.state.characters[ally] && ally !== actorId && !this.char(ally).dissolved) out.guard = ally;
+      else issues.push(`cannot guard "${guardRaw}"`);
     }
 
     // Does it need a roll? Engine decides from the structured target, not from rhetoric.
@@ -381,10 +384,14 @@ export class Engine {
       this.emit('memory.invoke', { memory: m.id, before, reinterpretation: action.memory.reinterpretation, original: m.original, drift: +drift.toFixed(3) }, { actor: actorId });
     }
     for (const issue of action.issues) this.flag('intent', issue, actorId);
+    if (action.guard) {
+      this.state.guards[action.guard] = actorId;
+      this.emit('guard.set', { ally: action.guard, name: this.char(action.guard).name }, { actor: actorId });
+    }
     this.emit('action.declare', {
       say: action.say, do: action.do, kind: action.kind, target: action.target, skill: action.skill, domain: action.domain,
       memory: action.memory?.id ?? null, needsRoll: action.needsRoll, pool: action.pool, poolParts: action.poolParts,
-      difficulty: action.difficulty, theorize: action.theorize, shareWith: action.shareWith, rest: action.rest,
+      difficulty: action.difficulty, theorize: action.theorize, guard: action.guard, rest: action.rest,
     }, { actor: actorId, backstage: { intent: action.intent, beat: action.beat } });
     return action;
   }
@@ -401,6 +408,11 @@ export class Engine {
     if (this.state.nextDesperate) { position = 'desperate'; this.state.nextDesperate = false; }
     let effect = EFFECTS.includes(raw.effect) ? raw.effect : null;
     if (!effect) { this.flag('stakes', `invalid effect "${raw.effect}", defaulted to standard`); effect = 'standard'; }
+    if (position === 'desperate') {
+      // Desperate is harder (one more die dropped) and pays more (one effect step up).
+      if (this.rules.desperateDifficultyStep) action.difficulty = stepDifficulty(action.difficulty, this.rules.desperateDifficultyStep);
+      if (this.rules.desperateEffectStep) effect = EFFECTS[Math.min(EFFECTS.length - 1, EFFECTS.indexOf(effect) + this.rules.desperateEffectStep)];
+    }
     let resistance = RESISTANCES.includes(raw.resistance) ? raw.resistance : null;
     if (!resistance) { resistance = action.target.type === 'delve' ? 'reach' : 'coherence'; this.flag('stakes', `invalid resistance "${raw.resistance}", defaulted to ${resistance}`); }
     let die = this.rules.stressDie[position];
@@ -448,7 +460,7 @@ export class Engine {
     if (branch === 'fail' || branch === 'cost') {
       let amount = this.rng.die(stakes.die);
       if (roll.band === 'critFail') amount *= this.rules.critFailStressMultiplier;
-      out.stress.push(...this.inflict(action.actor, stakes.resistance, amount, { die: stakes.die, shareWith: action.shareWith }));
+      out.stress.push(...this.inflict(action.actor, stakes.resistance, amount, { die: stakes.die }));
     }
     // --- outgoing effect
     if (branch === 'success' || branch === 'cost') {
@@ -500,6 +512,8 @@ export class Engine {
   inflict(actorId, resistance, amount, { die = null, shareWith = null, source = null } = {}) {
     const results = [];
     const parts = [[actorId, amount]];
+    const guardian = this.state.guards[actorId];
+    if (!shareWith && guardian && guardian !== actorId && !this.char(guardian).dissolved) shareWith = guardian;
     if (shareWith && amount > 0) {
       const half = Math.ceil(amount / 2);
       parts[0][1] = amount - half;
@@ -593,6 +607,11 @@ export class Engine {
     if (before.reach !== c.cone.reach || before.horizon !== c.cone.horizon) {
       this.emit('cone.change', { before, after: { ...c.cone }, why }, { actor: id });
     }
+  }
+
+  /** A guard lasts until the guardian's next turn. */
+  clearGuardsBy(guardianId) {
+    for (const [ally, g] of Object.entries(this.state.guards)) if (g === guardianId) delete this.state.guards[ally];
   }
 
   tick(clockId, by, why = '') {
@@ -732,7 +751,8 @@ export class Engine {
     if (!m.experiences.length) c.memories.splice(c.memories.indexOf(m), 1);
     const amount = Math.min(c.stress[h.resistance], this.rng.die(h.die));
     c.stress[h.resistance] -= amount;
-    const ev = this.emit('haunt.rest', { haunt: h.id, name: h.name, resistance: h.resistance, die: h.die, cleared: amount, spent, memory: m.id, memoryGone: !m.experiences.length, total: this.totalStress(c.id) }, { actor: c.id });
+    if (this.rules.restGrantsResolve) c.resolve += this.rules.restGrantsResolve;
+    const ev = this.emit('haunt.rest', { haunt: h.id, name: h.name, resistance: h.resistance, die: h.die, cleared: amount, spent, memory: m.id, memoryGone: !m.experiences.length, total: this.totalStress(c.id), resolve: c.resolve }, { actor: c.id });
     return ev.data;
   }
 
@@ -839,6 +859,7 @@ export class Engine {
       fallouts: c.fallouts.map((f) => ({ name: f.name, severity: f.severity })),
       conditions: c.conditions.map((x) => x.name), memories: c.memories.length, resolve: c.resolve,
       dissolved: c.dissolved, forked: c.forked,
+      guardedBy: this.state.guards[id] ?? null,
       algotype: c.algotypeRevealed ? c.algotype.label : null,
     };
   }

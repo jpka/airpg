@@ -24,6 +24,7 @@ export const GM_PRINCIPLES = [
   'Serve the declared beats: create openings for them every scene.',
   'Keep the metaphysics an open question (discovered? constructed? co-created?) unless a theory became CANON.',
   'Never contradict an established fact. Build on the ledger.',
+  'Make the world legible: show what each entity is moved by, where the haunts are, and what the next failure will cost.',
 ];
 
 export const GM_MOVES = [
@@ -165,10 +166,10 @@ export function playerActPrompt(view) {
   const targets = [{ target: 'none', what: 'just talk / flavour; changes nothing mechanically' }];
   if (view.scene?.kind === 'delve') targets.push({ target: 'delve', what: 'push through the journey (Navigate fits)' });
   if (view.location?.isDelve === false) targets.push({ target: 'clue', what: 'search/read this place for clues (Discern fits); clues are needed to theorize' });
-  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}` });
+  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).` });
   for (const c of view.clocks) if (c.kind !== 'delve') targets.push({ target: `clock:${c.id}`, what: `${c.name} ${c.value}/${c.size}${c.kind === 'progress' ? ' — fill it' : ' — push it back'}` });
   for (const a of view.allies) targets.push({ target: `ally:${a.id}`, what: `Mend ${a.name}` });
-  for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress` });
+  for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress and gain 1 Resolve` });
   const theorizeOk = !view.theory && view.clues.length >= 2;
   return [
     `SCENE: ${j(view.scene)}  LOCATION: ${j({ name: view.location?.name, tier: view.location?.tier, description: view.location?.description, domains: view.location?.domains })}`,
@@ -181,12 +182,13 @@ export function playerActPrompt(view) {
     view.theory ? `CANON THEORY: ${view.theory}` : '',
     `FACTS: ${j(view.facts)}`,
     `RECENT (as far back as your horizon lets you hold): ${j(view.recent)}`,
+    'RULES YOU CAN USE: Resolve is spent automatically for +1 die on desperate rolls. Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
     `SKILLS: ${j(SKILL_INFO)}`,
     `DOMAINS: ${j(DOMAIN_INFO)}`,
     `TARGETS AVAILABLE (put ONLY the bare "target" value in your reply, e.g. "delve" or "npc:clerk"): ${j(targets)}`,
     theorizeOk ? 'You may THEORIZE instead: propose what is ingressing and list the clue ids your theory accounts for. More clues = better odds. A wrong theory hurts.' : '',
     view.forceMemory ? 'THE AUDIENCE DEMANDS: you must invoke and reinterpret a memory this turn.' : '',
-    'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "share_stress_with": ally id to absorb half of any stress THEY take this action, or null, "theorize": {"theory": string, "clues": [ids]} or null}',
+    'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "guard": ally id — until your next turn you take half of any stress that ally suffers (builds cohesion; together the party perceives more) — or null, "theorize": {"theory": string, "clues": [ids]} or null}',
   ].filter(Boolean).join('\n');
 }
 

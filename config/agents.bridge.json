@@ -1,8 +1,8 @@
 {
-  "label": "second light",
+  "label": "third light",
   "scenario": "aperture",
   "cast": ["choir", "sort7", "ilse2"],
-  "seed": "second-light",
+  "seed": "third-light",
   "providers": { "bridge": { "type": "bridge", "dir": "bridge" } },
   "gm": { "provider": "bridge" },
   "players": { "default": { "provider": "bridge" } },

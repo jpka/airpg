@@ -27,6 +27,7 @@ const MECH = {
   'character.dissolve': () => -1,
   'clock.complete': (e) => (e.data.kind === 'threat' || e.data.kind === 'cosmic' ? -1 : 0.8),
   'stress.share': () => 0.3,
+  'guard.set': () => 0.2,
   'stress.heal': () => 0.3,
   'npc.moved': () => 0.4,
   'cone.change': (e) => Math.sign((e.data.after.reach + e.data.after.horizon) - (e.data.before.reach + e.data.before.horizon)) * 0.4,

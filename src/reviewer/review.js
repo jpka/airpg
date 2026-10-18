@@ -9,19 +9,27 @@ import { computeCurves, classifyArc, eventText } from './curves.js';
 import { words, jaccard } from '../engine/core.js';
 
 const ROLL_TYPES = ['stakes.set', 'roll', 'outcome'];
-const MECHANICS = {
+// Choices are things agents decide to do; never choosing one is a design failure.
+// Consequences are things that happen to them; not occurring in one session is variance.
+const CHOICES = {
   'memory.invoke': 'Memory invocation (reinterpret for +1 die)',
-  'haunt.rest': 'Haunts (spend a memory to clear stress)',
-  'stress.share': 'Stress sharing (collective glue)',
+  'haunt.rest': 'Haunts (spend a memory to rest)',
+  'guard.set': 'Guarding an ally (shared stress)',
   theorize: 'Theorize (clue-ledger truth)',
-  'npc.moved': 'Persuading entities (persuadability axis)',
+  'choice.persuade': 'Acting on entities (persuadability axis)',
+  'choice.clue': 'Searching for clues',
+};
+const CONSEQUENCES = {
+  'stress.share': 'Stress actually shared',
+  'npc.moved': 'An entity persuaded',
   'cone.change': 'Light-cone change',
   'beat.hit': 'Beats',
   'algotype.reveal': 'Algotype reveal (Ingressed fallout)',
-  'audience.ingress': 'Audience ingress',
   'memory.lose': 'Memory loss',
   'secret.unlock': 'Phase-gated secrets',
+  'audience.ingress': 'Audience ingress',
 };
+const MECHANICS = { ...CHOICES, ...CONSEQUENCES };
 
 export function reviewSession(session, opts = {}) {
   const ev = session.events;
@@ -83,7 +91,7 @@ export function reviewSession(session, opts = {}) {
 
   // ---------- agency & spotlight
   const actionTurns = turns.filter((t) => t.events.some((e) => e.type === 'action.declare'));
-  const AGENCY = new Set(['clue.found', 'npc.moved', 'stress.heal', 'beat.hit', 'theorize', 'haunt.rest', 'stress.share']);
+  const AGENCY = new Set(['clue.found', 'npc.moved', 'stress.heal', 'beat.hit', 'theorize', 'haunt.rest', 'stress.share', 'guard.set']);
   let agentful = 0;
   const spotlight = Object.fromEntries(cast.map((c) => [c.id, 0]));
   let talkOnly = 0;
@@ -118,8 +126,13 @@ export function reviewSession(session, opts = {}) {
   const moveEntropy = entropy(Object.values(moves));
 
   // ---------- mechanics coverage
-  const used = Object.fromEntries(Object.keys(MECHANICS).map((k) => [k, by(k).length]));
-  const dead = Object.entries(used).filter(([k, n]) => n === 0 && k !== 'audience.ingress' && k !== 'algotype.reveal').map(([k]) => k);
+  const declares = by('action.declare');
+  const countOf = (k) => k === 'choice.persuade' ? declares.filter((e) => e.data.target?.type === 'npc').length
+    : k === 'choice.clue' ? declares.filter((e) => e.data.target?.type === 'clue').length
+    : by(k).length;
+  const used = Object.fromEntries(Object.keys(MECHANICS).map((k) => [k, countOf(k)]));
+  const dead = Object.keys(CHOICES).filter((k) => used[k] === 0);
+  const quiet = Object.keys(CONSEQUENCES).filter((k) => used[k] === 0 && k !== 'audience.ingress');
 
   // ---------- algotype emergence (hidden drives)
   const algo = {};
@@ -158,18 +171,19 @@ export function reviewSession(session, opts = {}) {
     else add('success', 'game', 'difficulty_band', 'Success rate sits in a dramatic band', `${Math.round(anySuccess * 100)}% any-success (target 40–75%).`);
   }
   const desp = byPosition.desperate;
-  if (desp && desp.n >= 3 && desp.rate > 0.7) add('warning', 'game', 'desperate_soft', 'Desperate positions are not desperate', `${Math.round(desp.rate * 100)}% success on ${desp.n} desperate rolls.`);
+  if (desp && desp.n >= 5 && desp.rate > 0.7) add('warning', 'game', 'desperate_soft', 'Desperate positions are not desperate', `${Math.round(desp.rate * 100)}% success on ${desp.n} desperate rolls.`);
   if (flagCounts.leniency) add('warning', 'agents', 'gm_lenient', 'GM tried to set positions below the tier minimum', `${flagCounts.leniency} correction(s) by the engine.`, flags.filter((f) => f.data.kind === 'leniency').map((f) => f.i));
   if (falloutRate >= 0.12 && falloutRate <= 0.45) add('success', 'game', 'fallout_band', 'Fallout landed at a healthy rate', `${fallouts.length} fallouts over ${rolls.length} rolls (${(falloutRate * 100).toFixed(0)}%).`, fallouts.map((f) => f.i));
   else add('warning', 'game', 'fallout_rate', falloutRate < 0.12 ? 'Too little fallout: stress rarely turned into story' : 'Fallout is constant: consequences may blur together', `${fallouts.length} fallouts over ${rolls.length} rolls.`, fallouts.map((f) => f.i));
   for (const [id, n] of Object.entries(delveRolls)) if (n <= 2 && !forced.length) add('warning', 'game', 'delve_trivial', `Delve ${id} took only ${n} roll(s)`, 'Consider raising its resistance or lowering effect dice.');
   if (forced.length) add('info', 'game', 'delve_forced', `${forced.length} delve(s) had to be forced`, 'Rounds ran out before the delve resistance reached 0; the party paid Reach stress and the Attractor ticked.', forced.map((f) => f.i));
-  for (const k of dead) add('failure', 'game', `dead_${k}`, `Dead mechanic: ${MECHANICS[k]}`, 'Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.');
+  for (const k of dead) add('failure', 'game', `dead_${k}`, `Dead mechanic: ${MECHANICS[k]}`, 'No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.');
+  if (quiet.length) add('info', 'game', 'quiet_consequences', 'Consequences that did not occur', `${quiet.map((k) => MECHANICS[k]).join(', ')}. Normal variance in one session; watch across several.`);
   for (const [id, n] of Object.entries(spotlight)) if (n === 0) add('failure', 'game', 'no_spotlight', `${names[id]} never acted`, '');
   if (spotlightImbalance > 1.6 && Number.isFinite(spotlightImbalance)) add('warning', 'game', 'spotlight', 'Spotlight imbalance', `Actions per character: ${Object.entries(spotlight).map(([k, v]) => `${names[k]} ${v}`).join(', ')}.`);
   if (agency < 0.6) add('warning', 'game', 'low_agency', 'Low agency: many actions changed nothing', `${Math.round(agency * 100)}% of actions moved a clock, found a clue, moved an entity, healed, or hit a beat. Talk-only: ${talkOnly}.`);
   else add('success', 'game', 'agency', 'Actions mattered', `${Math.round(agency * 100)}% of actions changed the game state.`);
-  if (used['stress.share'] >= 2) add('success', 'game', 'cooperation', 'The party behaved like a collective', `${used['stress.share']} stress shares; cohesion reached ${Math.max(0, ...by('stress.share').map((e) => e.data.cohesion))}.`, by('stress.share').map((e) => e.i));
+  if (used['stress.share'] >= 2 || used['guard.set'] >= 2) add('success', 'game', 'cooperation', 'The party behaved like a collective', `${used['guard.set']} guard(s) set, ${used['stress.share']} stress share(s); cohesion reached ${Math.max(0, ...by('stress.share').map((e) => e.data.cohesion))}.`, by('stress.share').map((e) => e.i));
   const theo = by('theorize');
   if (theo.length) add(theo.some((t) => t.data.result !== 'false') ? 'success' : 'warning', 'game', 'theorize', theo.some((t) => t.data.result !== 'false') ? 'A theory became canon' : 'Every theory failed', theo.map((t) => `${names[t.actor]}: "${t.data.theory}" → ${t.data.result} (${t.data.accepted.length}/${t.data.claimed.length} clues accepted, 2d6=${t.data.dice.join('+')})`).join(' · '), theo.map((t) => t.i));
   for (const c of completed.filter((x) => x.kind === 'threat' || x.kind === 'cosmic')) add('info', 'game', `clock_${c.clock}`, `${c.name} completed`, `At event ${c.at} (${Math.round((c.at / ev.length) * 100)}% through).`, [c.at]);
@@ -213,7 +227,7 @@ export function reviewSession(session, opts = {}) {
     peakPosition: +peakPos.toFixed(3),
     arcShape: arc.shape,
   };
-  const deadFrac = dead.length / Object.keys(MECHANICS).length;
+  const deadFrac = dead.length / Object.keys(CHOICES).length;
   const diffScore = 1 - Math.min(1, Math.abs(anySuccess - 0.58) / 0.35);
   const falloutScore = 1 - Math.min(1, Math.abs(falloutRate - 0.28) / 0.25);
   const fitness = +(

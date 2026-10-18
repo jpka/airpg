@@ -78,9 +78,14 @@ export const DEFAULT_RULES = {
   // Theorize (Brindlewood): 2d6 + accepted clues - complexity
   theorize: { complexity: 4, trueAt: 7, greatAt: 10, failStressDie: 6, failIngressionTicks: 2 },
   // Collective (Levin: stress sharing as cognitive glue)
-  shareStress: true,
+  shareStress: true,                // guard: take half of an ally's stress until your next turn
   cohesionForSharedCone: 3,         // party sees the union of light cones at this cohesion
   sharesForReachGrowth: 2,          // "care as advancement": shared stress twice → Reach +1 (once/session)
+  // Desperate positions: harder AND more rewarding (review of second-light: desperate rolls succeeded 71%)
+  desperateDifficultyStep: 1,
+  desperateEffectStep: 1,
+  // Haunts: resting also grants Resolve, so trading a memory for respite is worth it
+  restGrantsResolve: 1,
   // Light cone
   horizonEventWindow: 6,            // events of history an agent sees per point of Horizon
   // Content scaling (lets the Explorer tune pacing without editing scenarios)

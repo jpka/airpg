@@ -129,3 +129,38 @@ test('extractJson tolerates fences, chatter and trailing commas', () => {
   assert.deepEqual(extractJson('Here: {"a": [1,2,],} thanks'), { a: [1, 2] });
   assert.equal(extractJson('no json'), null);
 });
+
+test('guard: guardian takes half of the ally\'s stress until the guardian\'s next turn', () => {
+  const e = mk(); e.start(); e.enterScene(1);
+  e.declare('choir', { say: 'We hold you.', target: 'none', guard: 'ilse2' });
+  e.inflict('ilse2', 'boundary', 6);
+  assert.ok(e.events.some((ev) => ev.type === 'stress.share' && ev.actor === 'choir'));
+  assert.equal(e.state.cohesion, 1);
+  e.clearGuardsBy('choir');
+  const before = e.state.cohesion;
+  e.inflict('ilse2', 'boundary', 4);
+  assert.equal(e.state.cohesion, before);
+});
+
+test('desperate drops one more die and raises effect', () => {
+  const e = mk(); e.start(); e.enterScene(1); // tier 2: standard difficulty
+  const a = e.declare('sort7', { do: 'leap', target: 'delve', skill: 'Navigate', domain: 'Number' });
+  const s = e.setStakes(a, { position: 'desperate', effect: 'standard', resistance: 'reach' });
+  assert.equal(a.difficulty, 'risky');
+  assert.equal(s.effect, 'great');
+});
+
+test('resting at a haunt spends an experience and grants Resolve', () => {
+  const e = mk(); e.start(); e.enterScene(2); // garden
+  e.char('ilse2').stress.substrate = 5;
+  const a = e.declare('ilse2', { target: 'haunt:warm-bed', memory: { id: 'm2' } });
+  const r = e.rest(a);
+  assert.equal(r.resolve, 1);
+  assert.ok(!e.char('ilse2').memories.some((m) => m.id === 'm2'));
+});
+
+test('player prompt shows what moves each entity', async () => {
+  const { playerActPrompt } = await import('../src/agents/prompts.js');
+  const e = mk(); e.start(); e.enterScene(2);
+  assert.match(playerActPrompt(e.playerView('ilse2')), /Moved by: Reshape, Mend/);
+});

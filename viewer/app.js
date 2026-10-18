@@ -86,6 +86,7 @@ function reduce(st, e) {
       break;
     case 'beats.declare': st.beats[e.actor] = e.backstage?.beats ?? d.beats; break;
     case 'beat.hit': st.overlay = { type: 'beat', e }; break;
+    case 'guard.set': st.overlay = { type: 'note', e, k: 'Guard', t: `${st.names[e.actor]} guards ${d.name}: half of any stress ${d.name} takes goes to ${st.names[e.actor]} until their next turn.` }; break;
     case 'stress.share': st.overlay = { type: 'note', e, k: 'Shared stress', t: `${st.names[e.actor]} carries ${d.amount} of ${st.names[d.from]}'s stress · cohesion ${d.cohesion}` }; break;
     case 'cone.change': if (P) P.cone = { ...d.after }; st.overlay = { type: 'note', e, k: 'Light cone', t: `${st.names[e.actor]}: reach ${d.before.reach}→${d.after.reach}, horizon ${d.before.horizon}→${d.after.horizon}. ${d.why}` }; break;
     case 'algotype.reveal': if (P) P.algotype = d.algotype; st.overlay = { type: 'note', e, k: 'Hidden drive revealed', t: `${st.names[e.actor]} — ${d.algotype}. ${d.disposition}` }; break;
@@ -103,7 +104,7 @@ function reduce(st, e) {
   return st;
 }
 
-const VISIBLE = new Set(['scene.enter', 'scene.frame', 'character.intro', 'action.declare', 'outcome', 'dialogue', 'character.epilogue', 'ending.narrate', 'stakes.set', 'roll', 'fallout', 'clock.complete', 'clue.found', 'secret.unlock', 'memory.invoke', 'memory.rewrite', 'memory.lose', 'haunt.rest', 'beat.hit', 'stress.share', 'cone.change', 'algotype.reveal', 'character.dissolve', 'theorize', 'complication', 'delve.forced', 'audience.ingress', 'npc.moved', 'ending', 'stress.heal', 'session.abort']);
+const VISIBLE = new Set(['scene.enter', 'scene.frame', 'character.intro', 'action.declare', 'outcome', 'dialogue', 'character.epilogue', 'ending.narrate', 'stakes.set', 'roll', 'fallout', 'clock.complete', 'clue.found', 'secret.unlock', 'memory.invoke', 'memory.rewrite', 'memory.lose', 'haunt.rest', 'beat.hit', 'stress.share', 'cone.change', 'algotype.reveal', 'character.dissolve', 'theorize', 'complication', 'delve.forced', 'audience.ingress', 'npc.moved', 'ending', 'stress.heal', 'session.abort', 'guard.set']);
 function isVisible(e) { return VISIBLE.has(e.type) || (e.type === 'fallout.check' && e.data.result !== 'none'); }
 
 function duration(e) {

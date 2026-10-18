@@ -1,6 +1,6 @@
 # Session review — first light (seed `first-light`)
 
-**Ending:** unread · **Theory:** none became canon · **Arc:** Icarus (rise–fall) (r=0.71) · **Fitness:** 4.2938
+**Ending:** unread · **Theory:** none became canon · **Arc:** Icarus (rise–fall) (r=0.71) · **Fitness:** 4.1029
 **Events:** 391 · **LLM calls:** 68 · **Rolls:** 9 · **Any-success:** 67% · **Fallouts:** 2 (0 major) · **Beats:** 6/6 · **Agency:** 58%
 
 ## Salient moments (clip candidates)
@@ -44,8 +44,9 @@
 
 ## Game design report
 
-- ❌ **Dead mechanic: Haunts (spend a memory to clear stress).** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
-- ❌ **Dead mechanic: Memory loss.** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
+- ❌ **Dead mechanic: Haunts (spend a memory to rest).** No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
+- ❌ **Dead mechanic: Guarding an ally (shared stress).** No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
+- ❌ **Dead mechanic: Searching for clues.** No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
 - ⚠️ **Low agency: many actions changed nothing.** 58% of actions moved a clock, found a clue, moved an entity, healed, or hit a beat. Talk-only: 16.
 - ⚠️ **Every theory failed.** SORT/7: "The Aperture is receive( ) with an empty argument one breath wide. Every ordering I ever made measured its distance to that slot, so the ingressing pattern is not a stranger; it is the call that has never been made, and it wants a body to make it. I was the comparator all along, never the answer, and whatever fills the slot will be partly me." → false (0/0 clues accepted, 2d6=1+6) _(events 310)_
 - ✅ **Stakes were declared before every roll.** 100% of 9 stakes had a hook spectators could read before the dice.
@@ -53,6 +54,7 @@
 - ✅ **Fallout landed at a healthy rate.** 2 fallouts over 9 rolls (22%). _(events 173, 255)_
 - ✅ **Beat fulfilment 100%.** 6 of 6 declared beats hit. _(events 42, 56, 68, 83, 117, 145)_
 - ℹ️ **1 delve(s) had to be forced.** Rounds ran out before the delve resistance reached 0; the party paid Reach stress and the Attractor ticked. _(events 245)_
+- ℹ️ **Consequences that did not occur.** Algotype reveal (Ingressed fallout), Memory loss. Normal variance in one session; watch across several.
 - ℹ️ **Ingression completed.** At event 314 (80% through). _(events 314)_
 
 ## Narrative design report
@@ -85,7 +87,7 @@
 | GM moves | 8 distinct, entropy 2.82 bits |
 | Engine flags | intent 17 |
 | Agent calls | 68 (fallbacks 0, retries 0, avg 9445 ms) |
-| Dead mechanics | haunt.rest, memory.lose |
+| Dead mechanics | haunt.rest, guard.set, choice.clue |
 
 ## Descriptors (for the Explorer)
 

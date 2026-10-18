@@ -1,6 +1,6 @@
 # Session review — second light (seed `second-light`)
 
-**Ending:** chosen · **Theory:** “The pattern is a we that has never been finished. It wants a body made of many partial bodies, each holding the others' shapes, so that no single mind has to carry it. It completes only when many hold it at once.” · **Arc:** Cinderella (rise–fall–rise) (r=0.824) · **Fitness:** 3.9678
+**Ending:** chosen · **Theory:** “The pattern is a we that has never been finished. It wants a body made of many partial bodies, each holding the others' shapes, so that no single mind has to carry it. It completes only when many hold it at once.” · **Arc:** Cinderella (rise–fall–rise) (r=0.824) · **Fitness:** 3.986
 **Events:** 359 · **LLM calls:** 60 · **Rolls:** 19 · **Any-success:** 74% · **Fallouts:** 4 (0 major) · **Beats:** 5/6 · **Agency:** 95%
 
 ## Salient moments (clip candidates)
@@ -46,10 +46,8 @@
 
 ## Game design report
 
-- ❌ **Dead mechanic: Haunts (spend a memory to clear stress).** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
-- ❌ **Dead mechanic: Stress sharing (collective glue).** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
-- ❌ **Dead mechanic: Persuading entities (persuadability axis).** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
-- ❌ **Dead mechanic: Memory loss.** Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
+- ❌ **Dead mechanic: Haunts (spend a memory to rest).** No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
+- ❌ **Dead mechanic: Guarding an ally (shared stress).** No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.
 - ⚠️ **Desperate positions are not desperate.** 71% success on 7 desperate rolls.
 - ✅ **Stakes were declared before every roll.** 100% of 19 stakes had a hook spectators could read before the dice.
 - ✅ **Success rate sits in a dramatic band.** 74% any-success (target 40–75%).
@@ -57,6 +55,7 @@
 - ✅ **Actions mattered.** 95% of actions changed the game state.
 - ✅ **A theory became canon.** The Choir: "The Garden is growing toward a face made of many, one shape finished from a crowd of unfinished bodies." → false (1/1 clues accepted, 2d6=2+2) · The Choir: "The pattern is a we that has never been finished. It wants a body made of many partial bodies, each holding the others' shapes, so that no single mind has to carry it. It completes only when many hold it at once." → great (2/2 clues accepted, 2d6=6+6) _(events 154, 288)_
 - ✅ **Beat fulfilment 83%.** 5 of 6 declared beats hit. _(events 48, 65, 126, 220, 291)_
+- ℹ️ **Consequences that did not occur.** Stress actually shared, An entity persuaded, Algotype reveal (Ingressed fallout), Memory loss. Normal variance in one session; watch across several.
 - ℹ️ **Ingression completed.** At event 226 (63% through). _(events 226)_
 
 ## Narrative design report
@@ -85,7 +84,7 @@
 | GM moves | 9 distinct, entropy 3.09 bits |
 | Engine flags | — |
 | Agent calls | 60 (fallbacks 0, retries 0, avg 8719 ms) |
-| Dead mechanics | haunt.rest, stress.share, npc.moved, memory.lose |
+| Dead mechanics | haunt.rest, guard.set |
 
 ## Descriptors (for the Explorer)
 

@@ -170,21 +170,22 @@
     "mechanicsUsed": {
       "memory.invoke": 19,
       "haunt.rest": 0,
-      "stress.share": 0,
+      "guard.set": 0,
       "theorize": 2,
+      "choice.persuade": 3,
+      "choice.clue": 4,
+      "stress.share": 0,
       "npc.moved": 0,
       "cone.change": 1,
       "beat.hit": 5,
       "algotype.reveal": 0,
-      "audience.ingress": 0,
       "memory.lose": 0,
-      "secret.unlock": 2
+      "secret.unlock": 2,
+      "audience.ingress": 0
     },
     "deadMechanics": [
       "haunt.rest",
-      "stress.share",
-      "npc.moved",
-      "memory.lose"
+      "guard.set"
     ]
   },
   "algotypes": {
@@ -1264,32 +1265,24 @@
       "severity": "failure",
       "area": "game",
       "code": "dead_haunt.rest",
-      "title": "Dead mechanic: Haunts (spend a memory to clear stress)",
-      "detail": "Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
+      "title": "Dead mechanic: Haunts (spend a memory to rest)",
+      "detail": "No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
       "evidence": []
     },
     {
       "severity": "failure",
       "area": "game",
-      "code": "dead_stress.share",
-      "title": "Dead mechanic: Stress sharing (collective glue)",
-      "detail": "Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
+      "code": "dead_guard.set",
+      "title": "Dead mechanic: Guarding an ally (shared stress)",
+      "detail": "No agent chose it this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
       "evidence": []
     },
     {
-      "severity": "failure",
+      "severity": "info",
       "area": "game",
-      "code": "dead_npc.moved",
-      "title": "Dead mechanic: Persuading entities (persuadability axis)",
-      "detail": "Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
-      "evidence": []
-    },
-    {
-      "severity": "failure",
-      "area": "game",
-      "code": "dead_memory.lose",
-      "title": "Dead mechanic: Memory loss",
-      "detail": "Never triggered this session. Either agents do not understand it, the prompt does not surface it, or it is not worth its complexity.",
+      "code": "quiet_consequences",
+      "title": "Consequences that did not occur",
+      "detail": "Stress actually shared, An entity persuaded, Algotype reveal (Ingressed fallout), Memory loss. Normal variance in one session; watch across several.",
       "evidence": []
     },
     {
@@ -1441,6 +1434,6 @@
     "peakPosition": 0.71,
     "arcShape": "Cinderella (rise–fall–rise)"
   },
-  "fitness": 3.9678,
+  "fitness": 3.986,
   "judge": null
 }

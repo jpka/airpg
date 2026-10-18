@@ -75,6 +75,7 @@ export async function runSession(o) {
   }
 
   async function turn(pid, round, { mustTheorize = false } = {}) {
+    engine.clearGuardsBy(pid);
     engine.emit('turn.start', { round }, { actor: pid });
     const view = engine.playerView(pid);
     if (mustTheorize) view.recent.push('THE APERTURE WILL NOT OPEN TO THE UNREAD: theorize now if you can.');
