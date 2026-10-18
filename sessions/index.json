@@ -1,5 +1,22 @@
 [
-  { "file": "sessions/second-light.json", "title": "Second light · after the reviewer's fix", "note": "Sonnet GM and three Haiku players, each a separate agent on the file bridge. Re-run after the first review: talk-only turns dropped from 16 to 0, agency rose from 58% to 95%, a theory became canon and the party earned the chosen ending." },
-  { "file": "sessions/first-light.json", "title": "First light · the before case", "note": "Same cast and models. The reviewer caught an engine bug: agents echoed menu text into their targets, so most actions became talk, no clues were found, and the finale theory failed." },
-  { "file": "sessions/scripted-demo.json", "title": "Scripted demo · seed mock-demo", "note": "Every seat is a deterministic scripted agent. A mechanical baseline; the reviewer flags its repetitive narration on purpose." }
+  {
+    "file": "sessions/third-light.json",
+    "title": "Third light · v0.2 rules",
+    "note": "Same cast and models on v0.2 (guard, harder desperate, legible persuadability). Agency 100%, desperate success 29%, 19 guards. Overcorrected: 19 fallouts in 24 rolls, because a shared hit rolled fallout twice. Fixed in v0.3."
+  },
+  {
+    "file": "sessions/second-light.json",
+    "title": "Second light · after the reviewer's fix",
+    "note": "Sonnet GM and three Haiku players, each a separate agent on the file bridge. Re-run after the first review: talk-only turns dropped from 16 to 0, agency rose from 58% to 95%, a theory became canon and the party earned the chosen ending."
+  },
+  {
+    "file": "sessions/first-light.json",
+    "title": "First light · the before case",
+    "note": "Same cast and models. The reviewer caught an engine bug: agents echoed menu text into their targets, so most actions became talk, no clues were found, and the finale theory failed."
+  },
+  {
+    "file": "sessions/scripted-demo.json",
+    "title": "Scripted demo · seed mock-demo",
+    "note": "Every seat is a deterministic scripted agent. A mechanical baseline; the reviewer flags its repetitive narration on purpose."
+  }
 ]

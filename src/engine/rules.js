@@ -86,6 +86,10 @@ export const DEFAULT_RULES = {
   desperateEffectStep: 1,
   // Haunts: resting also grants Resolve, so trading a memory for respite is worth it
   restGrantsResolve: 1,
+  restIsFreeAtLandmarks: true,      // v0.3: resting rides along with an action (once per scene) instead of costing the turn
+  // v0.3: shared stress makes ONE fallout check (the more-stressed sharer), so sharing smooths rather than multiplies fallout
+  sharedHitSingleFalloutCheck: true,
+  cohesionDecayPerScene: 1,
   // Light cone
   horizonEventWindow: 6,            // events of history an agent sees per point of Horizon
   // Content scaling (lets the Explorer tune pacing without editing scenarios)

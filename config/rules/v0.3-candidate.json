@@ -1,0 +1,7 @@
+{
+  "_why": "Recurring pattern among top MAP-Elites cells after v0.3 (scripted agents, 150 iterations): fallout ~28%, no dead mechanics, late climax. Validate against default rules with LLM agents before adopting.",
+  "stressDie": { "risky": 4 },
+  "roundsPerScene": { "landmark": 2, "delve": 1 },
+  "delveScale": 0.8,
+  "clockSizes": { "attractor": 8 }
+}

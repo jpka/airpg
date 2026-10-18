@@ -23,17 +23,398 @@
     }
   ],
   "baseline": {
-    "fitness": 4.031,
+    "fitness": 3.9754,
     "descriptors": {
-      "falloutRate": 0.522,
-      "successRate": 0.608,
-      "cooperation": 0.18,
-      "memoryLoss": 0,
-      "coneGrowth": 2.333,
-      "peakPosition": 0.71
+      "falloutRate": 0.499,
+      "successRate": 0.527,
+      "cooperation": 0.24,
+      "memoryLoss": 0.444,
+      "coneGrowth": 2.667,
+      "peakPosition": 0.767
     }
   },
   "archive": [
+    {
+      "cell": "4,2",
+      "genome": {
+        "rules": {
+          "stressDie": {
+            "risky": 4
+          },
+          "effectDie": {
+            "standard": 4
+          },
+          "theorize": {
+            "complexity": 4
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "landmark": 2,
+            "delve": 1
+          },
+          "cohesionForSharedCone": 4,
+          "difficultyByTier": {
+            "3": "standard"
+          },
+          "majorsToDissolve": 3,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 10,
+            "attractor": 8
+          }
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.4714,
+      "descriptors": {
+        "falloutRate": 0.279,
+        "successRate": 0.721,
+        "cooperation": 0.22,
+        "memoryLoss": 0.778,
+        "coneGrowth": 3.667,
+        "peakPosition": 0.895
+      },
+      "endings": [
+        "chosen",
+        "chosen",
+        "overrun"
+      ],
+      "deadMechanics": [],
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,1",
+      "genome": {
+        "rules": {
+          "stressDie": {
+            "risky": 4
+          },
+          "effectDie": {
+            "standard": 4
+          },
+          "theorize": {
+            "complexity": 3
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "landmark": 2,
+            "delve": 1
+          },
+          "cohesionForSharedCone": 4,
+          "difficultyByTier": {
+            "3": "standard"
+          },
+          "majorsToDissolve": 3,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 8,
+            "attractor": 8
+          }
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.4105,
+      "descriptors": {
+        "falloutRate": 0.28,
+        "successRate": 0.721,
+        "cooperation": 0.253,
+        "memoryLoss": 0.667,
+        "coneGrowth": 3.333,
+        "peakPosition": 0.8
+      },
+      "endings": [
+        "overrun",
+        "chosen",
+        "chosen"
+      ],
+      "deadMechanics": [],
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "genome": {
+        "rules": {
+          "effectDie": {
+            "standard": 4
+          },
+          "memoryInvokeBonus": 2,
+          "roundsPerScene": {
+            "landmark": 2
+          },
+          "difficultyByTier": {
+            "3": "risky"
+          },
+          "majorsToDissolve": 2,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 6,
+            "attractor": 6
+          }
+        },
+        "policy": {
+          "harshness": 0.5,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.3723,
+      "descriptors": {
+        "falloutRate": 0.357,
+        "successRate": 0.561,
+        "cooperation": 0.347,
+        "memoryLoss": 1,
+        "coneGrowth": 4.667,
+        "peakPosition": 0.738
+      },
+      "endings": [
+        "overrun",
+        "overrun",
+        "chosen"
+      ],
+      "deadMechanics": [],
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "genome": {
+        "rules": {
+          "fallout": {
+            "minorMax": 8
+          },
+          "stressDie": {
+            "risky": 4,
+            "desperate": 8
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "delve": 1,
+            "landmark": 2
+          },
+          "cohesionForSharedCone": 5,
+          "delveScale": 0.6,
+          "effectDie": {
+            "standard": 6
+          },
+          "clockSizes": {
+            "attractor": 4
+          }
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.3674,
+      "descriptors": {
+        "falloutRate": 0.378,
+        "successRate": 0.532,
+        "cooperation": 0.351,
+        "memoryLoss": 0.666,
+        "coneGrowth": 4.667,
+        "peakPosition": 0.679
+      },
+      "endings": [
+        "overrun",
+        "chosen",
+        "chosen"
+      ],
+      "deadMechanics": [],
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "genome": {
+        "rules": {
+          "stressDie": {
+            "risky": 4
+          },
+          "effectDie": {
+            "standard": 4
+          },
+          "theorize": {
+            "complexity": 3
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "landmark": 2,
+            "delve": 1
+          },
+          "cohesionForSharedCone": 4,
+          "difficultyByTier": {
+            "3": "standard"
+          },
+          "majorsToDissolve": 3,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 12,
+            "attractor": 6
+          }
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.4
+        }
+      },
+      "fitness": 4.3353,
+      "descriptors": {
+        "falloutRate": 0.292,
+        "successRate": 0.765,
+        "cooperation": 0.149,
+        "memoryLoss": 0.889,
+        "coneGrowth": 2.667,
+        "peakPosition": 0.772
+      },
+      "endings": [
+        "chosen",
+        "chosen",
+        "closed"
+      ],
+      "deadMechanics": [
+        "theorize"
+      ],
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "genome": {
+        "rules": {
+          "fallout": {
+            "minorMax": 8
+          },
+          "stressDie": {
+            "risky": 4,
+            "desperate": 10
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "delve": 1,
+            "landmark": 2
+          },
+          "cohesionForSharedCone": 5,
+          "delveScale": 0.6
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.303,
+      "descriptors": {
+        "falloutRate": 0.444,
+        "successRate": 0.548,
+        "cooperation": 0.314,
+        "memoryLoss": 0.778,
+        "coneGrowth": 5,
+        "peakPosition": 0.792
+      },
+      "endings": [
+        "overrun",
+        "chosen",
+        "overrun"
+      ],
+      "deadMechanics": [
+        "choice.persuade"
+      ],
+      "origin": "random"
+    },
+    {
+      "cell": "5,1",
+      "genome": {
+        "rules": {
+          "stressDie": {
+            "risky": 4
+          },
+          "effectDie": {
+            "standard": 4
+          },
+          "theorize": {
+            "complexity": 3
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "landmark": 2,
+            "delve": 1
+          },
+          "cohesionForSharedCone": 4,
+          "difficultyByTier": {
+            "3": "standard"
+          },
+          "majorsToDissolve": 3,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 10,
+            "attractor": 8
+          }
+        },
+        "policy": {
+          "harshness": 0.2,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.2862,
+      "descriptors": {
+        "falloutRate": 0.277,
+        "successRate": 0.752,
+        "cooperation": 0.242,
+        "memoryLoss": 0.667,
+        "coneGrowth": 3.333,
+        "peakPosition": 0.937
+      },
+      "endings": [
+        "chosen",
+        "chosen",
+        "chosen"
+      ],
+      "deadMechanics": [],
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "genome": {
+        "rules": {
+          "effectDie": {
+            "standard": 4
+          },
+          "memoryInvokeBonus": 2,
+          "roundsPerScene": {
+            "landmark": 2
+          },
+          "difficultyByTier": {
+            "3": "risky"
+          },
+          "majorsToDissolve": 2,
+          "delveScale": 1.2,
+          "clockSizes": {
+            "ingression": 6
+          }
+        },
+        "policy": {
+          "harshness": 0.5,
+          "cooperation": 0.7
+        }
+      },
+      "fitness": 4.2804,
+      "descriptors": {
+        "falloutRate": 0.436,
+        "successRate": 0.59,
+        "cooperation": 0.378,
+        "memoryLoss": 0.667,
+        "coneGrowth": 3.667,
+        "peakPosition": 0.793
+      },
+      "endings": [
+        "overrun",
+        "overrun",
+        "overrun"
+      ],
+      "deadMechanics": [],
+      "origin": "random"
+    },
     {
       "cell": "3,0",
       "genome": {
@@ -49,179 +430,35 @@
             "3": "risky"
           },
           "majorsToDissolve": 2,
-          "delveScale": 0.6,
+          "delveScale": 1.2,
           "clockSizes": {
-            "ingression": 6,
-            "attractor": 8
+            "ingression": 6
           },
-          "stressDie": {
-            "risky": 4
+          "fallout": {
+            "minorMax": 5
           }
         },
         "policy": {
           "harshness": 0.5,
-          "cooperation": 0.4
+          "cooperation": 0.7
         }
       },
-      "fitness": 4.3145,
+      "fitness": 4.2148,
       "descriptors": {
-        "falloutRate": 0.426,
-        "successRate": 0.555,
-        "cooperation": 0.201,
-        "memoryLoss": 0.111,
-        "coneGrowth": 2,
-        "peakPosition": 0.796
+        "falloutRate": 0.468,
+        "successRate": 0.607,
+        "cooperation": 0.359,
+        "memoryLoss": 0.222,
+        "coneGrowth": 3.667,
+        "peakPosition": 0.806
       },
       "endings": [
         "overrun",
-        "overrun",
+        "chosen",
         "overrun"
       ],
       "deadMechanics": [
-        "haunt.rest",
-        "memory.lose",
-        "npc.moved"
-      ],
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "genome": {
-        "rules": {
-          "stressDie": {
-            "risky": 4
-          },
-          "effectDie": {
-            "standard": 4
-          },
-          "majorsToDissolve": 2,
-          "delveScale": 1,
-          "clockSizes": {
-            "ingression": 10
-          },
-          "fallout": {
-            "minorMax": 8
-          }
-        },
-        "policy": {
-          "harshness": 0.2,
-          "cooperation": 0.7
-        }
-      },
-      "fitness": 4.2702,
-      "descriptors": {
-        "falloutRate": 0.367,
-        "successRate": 0.62,
-        "cooperation": 0.315,
-        "memoryLoss": 0.333,
-        "coneGrowth": 2.333,
-        "peakPosition": 0.762
-      },
-      "endings": [
-        "unread",
-        "closed",
-        "closed"
-      ],
-      "deadMechanics": [
-        "haunt.rest",
-        "theorize",
-        "memory.lose",
-        "npc.moved"
-      ],
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "genome": {
-        "rules": {
-          "memoryInvokeBonus": 0,
-          "difficultyByTier": {
-            "3": "standard"
-          },
-          "clockSizes": {
-            "attractor": 4,
-            "ingression": 6
-          },
-          "stressDie": {
-            "risky": 4,
-            "desperate": 10
-          },
-          "roundsPerScene": {
-            "landmark": 2,
-            "delve": 1
-          },
-          "delveScale": 1.2,
-          "majorsToDissolve": 4
-        },
-        "policy": {
-          "harshness": 0.8,
-          "cooperation": 0.1
-        }
-      },
-      "fitness": 4.2069,
-      "descriptors": {
-        "falloutRate": 0.33,
-        "successRate": 0.776,
-        "cooperation": 0.035,
-        "memoryLoss": 0.222,
-        "coneGrowth": 1.667,
-        "peakPosition": 0.81
-      },
-      "endings": [
-        "overrun",
-        "overrun",
-        "chosen"
-      ],
-      "deadMechanics": [
-        "haunt.rest",
-        "memory.lose",
-        "stress.share"
-      ],
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "genome": {
-        "rules": {
-          "effectDie": {
-            "standard": 4
-          },
-          "memoryInvokeBonus": 2,
-          "roundsPerScene": {
-            "landmark": 2
-          },
-          "difficultyByTier": {
-            "3": "risky"
-          },
-          "majorsToDissolve": 4,
-          "delveScale": 1.2,
-          "clockSizes": {
-            "ingression": 10
-          },
-          "cohesionForSharedCone": 2
-        },
-        "policy": {
-          "harshness": 0.5,
-          "cooperation": 0.7
-        }
-      },
-      "fitness": 4.1971,
-      "descriptors": {
-        "falloutRate": 0.402,
-        "successRate": 0.688,
-        "cooperation": 0.287,
-        "memoryLoss": 0,
-        "coneGrowth": 3,
-        "peakPosition": 0.775
-      },
-      "endings": [
-        "chosen",
-        "overrun",
-        "chosen"
-      ],
-      "deadMechanics": [
-        "haunt.rest",
-        "memory.lose"
+        "haunt.rest"
       ],
       "origin": "mutation"
     },
@@ -229,58 +466,48 @@
       "cell": "2,0",
       "genome": {
         "rules": {
-          "memoryInvokeBonus": 0,
-          "difficultyByTier": {
-            "3": "risky"
-          },
-          "clockSizes": {
-            "attractor": 6
-          },
           "stressDie": {
-            "risky": 4
+            "desperate": 6
+          },
+          "theorize": {
+            "complexity": 3
           },
           "roundsPerScene": {
-            "landmark": 2,
-            "delve": 3
+            "delve": 2
           },
-          "delveScale": 1.2,
-          "majorsToDissolve": 3,
-          "theorize": {
-            "complexity": 2
+          "clockSizes": {
+            "attractor": 8,
+            "ingression": 10
           },
-          "cohesionForSharedCone": 2,
-          "effectDie": {
-            "standard": 4
-          }
+          "cohesionForSharedCone": 5
         },
         "policy": {
-          "harshness": 0.2,
-          "cooperation": 0.1
+          "harshness": 0.5,
+          "cooperation": 0.7
         }
       },
-      "fitness": 4.1721,
+      "fitness": 4.1844,
       "descriptors": {
-        "falloutRate": 0.427,
-        "successRate": 0.537,
-        "cooperation": 0.058,
+        "falloutRate": 0.502,
+        "successRate": 0.498,
+        "cooperation": 0.42,
         "memoryLoss": 0.222,
-        "coneGrowth": 1,
-        "peakPosition": 0.742
+        "coneGrowth": 4,
+        "peakPosition": 0.776
       },
       "endings": [
-        "closed",
-        "overrun",
-        "overrun"
+        "unread",
+        "unread",
+        "unread"
       ],
       "deadMechanics": [
-        "haunt.rest",
         "theorize",
-        "memory.lose"
+        "haunt.rest"
       ],
       "origin": "mutation"
     },
     {
-      "cell": "4,1",
+      "cell": "1,1",
       "genome": {
         "rules": {
           "effectDie": {
@@ -291,19 +518,15 @@
             "landmark": 2
           },
           "difficultyByTier": {
-            "3": "risky"
+            "3": "dangerous"
           },
-          "majorsToDissolve": 4,
+          "majorsToDissolve": 2,
           "delveScale": 1.2,
           "clockSizes": {
-            "ingression": 10
+            "ingression": 6
           },
-          "cohesionForSharedCone": 2,
-          "stressDie": {
-            "risky": 8
-          },
-          "theorize": {
-            "complexity": 6
+          "fallout": {
+            "minorMax": 8
           }
         },
         "policy": {
@@ -311,129 +534,63 @@
           "cooperation": 0.7
         }
       },
-      "fitness": 4.0718,
+      "fitness": 3.935,
       "descriptors": {
-        "falloutRate": 0.561,
-        "successRate": 0.733,
-        "cooperation": 0.241,
-        "memoryLoss": 0.333,
-        "coneGrowth": 3.333,
-        "peakPosition": 0.711
+        "falloutRate": 0.595,
+        "successRate": 0.432,
+        "cooperation": 0.32,
+        "memoryLoss": 0.667,
+        "coneGrowth": 2.667,
+        "peakPosition": 0.712
       },
       "endings": [
-        "unread",
-        "chosen",
-        "chosen"
+        "overrun",
+        "overrun",
+        "overrun"
       ],
-      "deadMechanics": [
-        "haunt.rest",
-        "memory.lose"
-      ],
+      "deadMechanics": [],
       "origin": "mutation"
     },
     {
-      "cell": "2,1",
+      "cell": "1,2",
       "genome": {
         "rules": {
-          "memoryInvokeBonus": 1,
-          "difficultyByTier": {
-            "3": "risky"
-          },
-          "clockSizes": {
-            "attractor": 4,
-            "ingression": 12
+          "fallout": {
+            "minorMax": 8
           },
           "stressDie": {
-            "risky": 4
+            "risky": 8,
+            "desperate": 10
           },
+          "memoryInvokeBonus": 1,
           "roundsPerScene": {
-            "landmark": 2,
-            "delve": 1
+            "delve": 2,
+            "landmark": 2
           },
-          "delveScale": 1.2,
-          "majorsToDissolve": 4,
-          "theorize": {
-            "complexity": 2
-          },
-          "cohesionForSharedCone": 2,
-          "effectDie": {
-            "standard": 6
-          }
+          "cohesionForSharedCone": 5,
+          "delveScale": 0.6
         },
         "policy": {
           "harshness": 0.2,
-          "cooperation": 0.1
-        }
-      },
-      "fitness": 4.0504,
-      "descriptors": {
-        "falloutRate": 0.448,
-        "successRate": 0.514,
-        "cooperation": 0.045,
-        "memoryLoss": 0.333,
-        "coneGrowth": 0.667,
-        "peakPosition": 0.769
-      },
-      "endings": [
-        "overrun",
-        "chosen",
-        "unread"
-      ],
-      "deadMechanics": [
-        "haunt.rest",
-        "memory.lose",
-        "theorize"
-      ],
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,1",
-      "genome": {
-        "rules": {
-          "effectDie": {
-            "standard": 4
-          },
-          "memoryInvokeBonus": 2,
-          "roundsPerScene": {
-            "landmark": 2,
-            "delve": 2
-          },
-          "difficultyByTier": {
-            "3": "risky"
-          },
-          "majorsToDissolve": 4,
-          "delveScale": 1.2,
-          "clockSizes": {
-            "ingression": 10,
-            "attractor": 4
-          },
-          "cohesionForSharedCone": 2,
-          "stressDie": {
-            "risky": 8
-          }
-        },
-        "policy": {
-          "harshness": 0.5,
           "cooperation": 0.7
         }
       },
-      "fitness": 4.0323,
+      "fitness": 3.8617,
       "descriptors": {
-        "falloutRate": 0.471,
-        "successRate": 0.757,
-        "cooperation": 0.24,
-        "memoryLoss": 0.333,
-        "coneGrowth": 3.667,
-        "peakPosition": 0.799
+        "falloutRate": 0.576,
+        "successRate": 0.436,
+        "cooperation": 0.376,
+        "memoryLoss": 1.111,
+        "coneGrowth": 4,
+        "peakPosition": 0.672
       },
       "endings": [
         "overrun",
-        "chosen",
+        "unread",
         "chosen"
       ],
       "deadMechanics": [
-        "haunt.rest",
-        "memory.lose"
+        "theorize"
       ],
       "origin": "mutation"
     },
@@ -441,45 +598,42 @@
       "cell": "1,0",
       "genome": {
         "rules": {
-          "fallout": {
-            "minorMax": 6
-          },
           "stressDie": {
             "risky": 6,
-            "desperate": 8
+            "desperate": 10
           },
           "theorize": {
-            "complexity": 5
-          },
-          "cohesionForSharedCone": 3,
-          "difficultyByTier": {
-            "3": "dangerous"
-          },
-          "majorsToDissolve": 4,
-          "clockSizes": {
-            "ingression": 10,
-            "attractor": 8
-          },
-          "effectDie": {
-            "standard": 4
+            "complexity": 2
           },
           "roundsPerScene": {
             "delve": 1
-          }
+          },
+          "difficultyByTier": {
+            "3": "dangerous"
+          },
+          "majorsToDissolve": 2,
+          "delveScale": 0.8,
+          "clockSizes": {
+            "ingression": 10
+          },
+          "fallout": {
+            "minorMax": 8
+          },
+          "cohesionForSharedCone": 2
         },
         "policy": {
-          "harshness": 0.8,
+          "harshness": 0.2,
           "cooperation": 0.1
         }
       },
-      "fitness": 3.8014,
+      "fitness": 3.6723,
       "descriptors": {
-        "falloutRate": 0.553,
-        "successRate": 0.43,
-        "cooperation": 0.029,
-        "memoryLoss": 0.111,
-        "coneGrowth": -0.333,
-        "peakPosition": 0.793
+        "falloutRate": 0.597,
+        "successRate": 0.388,
+        "cooperation": 0.075,
+        "memoryLoss": 0.222,
+        "coneGrowth": 1.333,
+        "peakPosition": 0.801
       },
       "endings": [
         "unread",
@@ -489,90 +643,38 @@
       "deadMechanics": [
         "haunt.rest",
         "theorize",
-        "npc.moved",
-        "memory.lose",
-        "stress.share"
+        "choice.persuade"
       ],
       "origin": "mutation"
     },
     {
-      "cell": "1,1",
+      "cell": "5,0",
       "genome": {
         "rules": {
-          "fallout": {
-            "minorMax": 6
-          },
           "stressDie": {
-            "risky": 6,
-            "desperate": 8
+            "risky": 4,
+            "desperate": 10
+          },
+          "effectDie": {
+            "standard": 4
           },
           "theorize": {
-            "complexity": 5
+            "complexity": 2
+          },
+          "memoryInvokeBonus": 1,
+          "roundsPerScene": {
+            "landmark": 2,
+            "delve": 2
           },
           "cohesionForSharedCone": 3,
           "difficultyByTier": {
-            "3": "dangerous"
+            "3": "standard"
           },
-          "majorsToDissolve": 4,
+          "majorsToDissolve": 3,
+          "delveScale": 1.2,
           "clockSizes": {
-            "ingression": 6
+            "ingression": 12
           },
-          "effectDie": {
-            "standard": 8
-          }
-        },
-        "policy": {
-          "harshness": 0.8,
-          "cooperation": 0.7
-        }
-      },
-      "fitness": 3.6554,
-      "descriptors": {
-        "falloutRate": 0.791,
-        "successRate": 0.372,
-        "cooperation": 0.479,
-        "memoryLoss": 0.333,
-        "coneGrowth": 1.333,
-        "peakPosition": 0.75
-      },
-      "endings": [
-        "unread",
-        "unread",
-        "unread"
-      ],
-      "deadMechanics": [
-        "haunt.rest",
-        "theorize",
-        "npc.moved",
-        "memory.lose"
-      ],
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "genome": {
-        "rules": {
-          "stressDie": {
-            "risky": 6,
-            "desperate": 10
-          },
-          "theorize": {
-            "complexity": 3
-          },
-          "roundsPerScene": {
-            "delve": 2
-          },
-          "difficultyByTier": {
-            "3": "dangerous"
-          },
-          "majorsToDissolve": 4,
-          "delveScale": 0.8,
-          "clockSizes": {
-            "ingression": 10,
-            "attractor": 8
-          },
-          "memoryInvokeBonus": 1,
-          "cohesionForSharedCone": 2,
           "fallout": {
             "minorMax": 5
           }
@@ -582,14 +684,62 @@
           "cooperation": 0.1
         }
       },
-      "fitness": 3.5254,
+      "fitness": 3.6573,
       "descriptors": {
-        "falloutRate": 0.635,
-        "successRate": 0.268,
-        "cooperation": 0.105,
-        "memoryLoss": 0.111,
-        "coneGrowth": 1,
-        "peakPosition": 0.715
+        "falloutRate": 0.267,
+        "successRate": 0.793,
+        "cooperation": 0.062,
+        "memoryLoss": 0.222,
+        "coneGrowth": 1.667,
+        "peakPosition": 0.66
+      },
+      "endings": [
+        "chosen",
+        "chosen",
+        "chosen"
+      ],
+      "deadMechanics": [
+        "haunt.rest"
+      ],
+      "origin": "mutation"
+    },
+    {
+      "cell": "0,1",
+      "genome": {
+        "rules": {
+          "stressDie": {
+            "risky": 6
+          },
+          "memoryInvokeBonus": 0,
+          "cohesionForSharedCone": 3,
+          "difficultyByTier": {
+            "3": "dangerous"
+          },
+          "delveScale": 1,
+          "clockSizes": {
+            "attractor": 4,
+            "ingression": 10
+          },
+          "fallout": {
+            "minorMax": 6
+          },
+          "roundsPerScene": {
+            "delve": 2
+          }
+        },
+        "policy": {
+          "harshness": 0.8,
+          "cooperation": 0.4
+        }
+      },
+      "fitness": 3.4427,
+      "descriptors": {
+        "falloutRate": 0.667,
+        "successRate": 0.278,
+        "cooperation": 0.255,
+        "memoryLoss": 0.333,
+        "coneGrowth": 3,
+        "peakPosition": 0.645
       },
       "endings": [
         "unread",
@@ -597,373 +747,203 @@
         "unread"
       ],
       "deadMechanics": [
-        "haunt.rest",
         "theorize",
-        "npc.moved",
-        "memory.lose"
+        "haunt.rest"
       ],
       "origin": "mutation"
     }
   ],
   "log": [
     {
-      "cell": "3,0",
-      "fitness": 4.031,
+      "cell": "2,1",
+      "fitness": 3.9754,
       "improved": true,
       "origin": "default"
     },
     {
-      "cell": "3,0",
-      "fitness": 3.8804,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.869,
+      "cell": "1,1",
+      "fitness": 3.8368,
       "improved": true,
       "origin": "random"
     },
     {
-      "cell": "3,0",
-      "fitness": 3.7786,
+      "cell": "2,1",
+      "fitness": 3.7024,
       "improved": false,
       "origin": "random"
     },
     {
-      "cell": "3,0",
-      "fitness": 3.9984,
+      "cell": "2,1",
+      "fitness": 4.1038,
+      "improved": true,
+      "origin": "random"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.9963,
       "improved": false,
       "origin": "random"
     },
     {
       "cell": "1,0",
-      "fitness": 3.5618,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4723,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 3.7936,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9215,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1357,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.8633,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.8702,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1892,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9318,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4894,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1053,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.5817,
+      "fitness": 3.6696,
       "improved": true,
       "origin": "random"
     },
     {
       "cell": "1,1",
-      "fitness": 3.5199,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.3024,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9518,
+      "fitness": 3.7106,
       "improved": false,
       "origin": "random"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.831,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0521,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.6825,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.8525,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9133,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.8394,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9603,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1435,
-      "improved": true,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0718,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9484,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4637,
-      "improved": false,
-      "origin": "random"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.1518,
-      "improved": false,
-      "origin": "mutation"
     },
     {
       "cell": "3,1",
-      "fitness": 4.2702,
+      "fitness": 3.8676,
       "improved": true,
-      "origin": "mutation"
+      "origin": "random"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.3609,
-      "improved": false,
-      "origin": "mutation"
+      "cell": "1,2",
+      "fitness": 3.6157,
+      "improved": true,
+      "origin": "random"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.5256,
-      "improved": false,
-      "origin": "mutation"
+      "cell": "2,2",
+      "fitness": 4.303,
+      "improved": true,
+      "origin": "random"
     },
     {
       "cell": "1,1",
-      "fitness": 3.5199,
+      "fitness": 3.874,
+      "improved": true,
+      "origin": "random"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.8404,
       "improved": false,
-      "origin": "mutation"
+      "origin": "random"
     },
     {
       "cell": "3,1",
-      "fitness": 4.2702,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.6825,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.3306,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9351,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5902,
+      "fitness": 4.2804,
       "improved": true,
-      "origin": "mutation"
+      "origin": "random"
     },
     {
-      "cell": "3,0",
-      "fitness": 3.9829,
+      "cell": "1,1",
+      "fitness": 3.9334,
+      "improved": true,
+      "origin": "random"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.6093,
       "improved": false,
-      "origin": "mutation"
+      "origin": "random"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.7441,
+      "improved": false,
+      "origin": "random"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 3.9457,
+      "improved": true,
+      "origin": "random"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.9002,
+      "improved": false,
+      "origin": "random"
+    },
+    {
+      "cell": "0,1",
+      "fitness": 3.1556,
+      "improved": true,
+      "origin": "random"
     },
     {
       "cell": "1,0",
-      "fitness": 3.3899,
+      "fitness": 3.6674,
       "improved": false,
-      "origin": "mutation"
+      "origin": "random"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.6629,
+      "improved": false,
+      "origin": "random"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.0035,
+      "improved": false,
+      "origin": "random"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 3.7958,
+      "improved": false,
+      "origin": "random"
     },
     {
       "cell": "2,0",
-      "fitness": 3.7773,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.1745,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1463,
+      "fitness": 4.0305,
       "improved": true,
+      "origin": "random"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.6224,
+      "improved": false,
+      "origin": "random"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.7672,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.0727,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 3.9457,
+      "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "3,1",
-      "fitness": 4.2702,
+      "fitness": 4.1238,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "0,0",
-      "fitness": 3.3559,
+      "cell": "2,1",
+      "fitness": 4.0741,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.9821,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 3.892,
       "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.8446,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0457,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.9896,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5553,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1716,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1293,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1716,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 3.8184,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 2.8791,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.3559,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.7484,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.3559,
-      "improved": false,
       "origin": "mutation"
     },
     {
@@ -973,1022 +953,854 @@
       "origin": "mutation"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.5025,
+      "cell": "5,1",
+      "fitness": 3.8891,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 4.1212,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.3559,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.2019,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.3145,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9829,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6405,
+      "cell": "5,2",
+      "fitness": 4.0076,
       "improved": true,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.8881,
-      "improved": true,
+      "fitness": 3.8057,
+      "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "2,0",
-      "fitness": 3.7722,
+      "cell": "2,2",
+      "fitness": 4.1554,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "1,0",
-      "fitness": 3.7855,
+      "fitness": 3.4017,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.0361,
       "improved": true,
       "origin": "mutation"
     },
     {
       "cell": "3,1",
-      "fitness": 3.9732,
+      "fitness": 4.2506,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.6157,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.4356,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.0392,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "0,1",
+      "fitness": 3.1556,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "3,1",
-      "fitness": 4.1758,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7855,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 3.8063,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.9395,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.8963,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1716,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7656,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.199,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1971,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5624,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.3145,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 4.0432,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7855,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7172,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.2106,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0851,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.3683,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5354,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.8537,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4035,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.9812,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 3.811,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 4.0432,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 4.0432,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9287,
+      "fitness": 4.2531,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.773,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.766,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1023,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7966,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0837,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1679,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 4.0432,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1558,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9417,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.9847,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.3058,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7834,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1608,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9051,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5212,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.6215,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1838,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.8056,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.5976,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.1716,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.3145,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 4.1721,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5594,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9824,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.8128,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5389,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9933,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 4.0504,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9307,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5079,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5358,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5969,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "fitness": 3.8755,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.6623,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5079,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.2887,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1859,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.4492,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "fitness": 3.9836,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1165,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 3.9287,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7664,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.6427,
+      "fitness": 4.0305,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,1",
-      "fitness": 4.0142,
+      "fitness": 3.9149,
       "improved": true,
       "origin": "mutation"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.5082,
-      "improved": false,
+      "cell": "4,1",
+      "fitness": 4.3859,
+      "improved": true,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 4.2619,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5966,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.7855,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.073,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5079,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5603,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.7806,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.3145,
+      "cell": "3,2",
+      "fitness": 4.0727,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.8539,
+      "fitness": 4.1288,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.7508,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,1",
-      "fitness": 4.0142,
+      "fitness": 3.9149,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "2,0",
-      "fitness": 3.9477,
-      "improved": false,
+      "cell": "0,1",
+      "fitness": 3.2951,
+      "improved": true,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 4.1678,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 4.1721,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 4.0015,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9786,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,1",
-      "fitness": 4.0142,
+      "cell": "2,2",
+      "fitness": 4.0069,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,0",
-      "fitness": 4.015,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5603,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.6484,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.8014,
+      "fitness": 3.6497,
       "improved": true,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 4.0206,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "fitness": 3.8562,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.775,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5404,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0387,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5247,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,1",
-      "fitness": 3.9902,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.8014,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,0",
-      "fitness": 3.8791,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.8014,
+      "cell": "5,0",
+      "fitness": 3.5668,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,0",
-      "fitness": 4.1318,
+      "fitness": 3.6497,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 3.9612,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.0087,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.0069,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 3.9759,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "1,1",
-      "fitness": 3.6225,
+      "fitness": 3.3865,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.5232,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.3829,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.0361,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "2,1",
-      "fitness": 3.6969,
+      "fitness": 3.9187,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "2,0",
-      "fitness": 3.5624,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.6554,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "fitness": 4.2702,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.0496,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5254,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4823,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1955,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4211,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.9917,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.8745,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 4.2069,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "5,0",
-      "fitness": 3.769,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1815,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.4729,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.967,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.2881,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 3.7741,
+      "cell": "2,1",
+      "fitness": 3.7369,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,1",
-      "fitness": 4.0323,
-      "improved": true,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1787,
+      "fitness": 3.9121,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.4033,
+      "cell": "1,2",
+      "fitness": 3.7446,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 3.9409,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 4.2804,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.604,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 4.185,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.0087,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.303,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.9294,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "4,1",
-      "fitness": 4.0718,
+      "fitness": 4.3859,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,0",
+      "fitness": 4.1121,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.7841,
       "improved": true,
       "origin": "mutation"
     },
     {
-      "cell": "3,1",
-      "fitness": 4.2702,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
       "cell": "1,0",
-      "fitness": 3.8014,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.6949,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,1",
-      "fitness": 3.5076,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.2269,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "2,1",
-      "fitness": 3.9622,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "0,0",
-      "fitness": 3.5254,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.5171,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.1917,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "4,0",
-      "fitness": 4.0044,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,1",
-      "fitness": 4.2702,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.2479,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "1,0",
-      "fitness": 3.8014,
+      "fitness": 3.5831,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.9535,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.1271,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0419,
-      "improved": false,
+      "fitness": 4.1844,
+      "improved": true,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 4.1721,
-      "improved": false,
-      "origin": "mutation"
-    },
-    {
-      "cell": "3,0",
-      "fitness": 4.0481,
+      "fitness": 4.033,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "5,0",
-      "fitness": 3.9604,
+      "fitness": 3.6573,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.9014,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 4.0481,
+      "cell": "1,1",
+      "fitness": 3.827,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "3,0",
-      "fitness": 3.8264,
+      "cell": "1,1",
+      "fitness": 3.9334,
       "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.3304,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.0361,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.7679,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,2",
+      "fitness": 4.0873,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 3.9084,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "0,1",
+      "fitness": 3.4427,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.3674,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.6696,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.8979,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.689,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.338,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.303,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,2",
+      "fitness": 4.1203,
+      "improved": true,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.7964,
+      "fitness": 4.1089,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.8014,
+      "cell": "4,1",
+      "fitness": 4.0287,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "1,0",
-      "fitness": 3.6352,
+      "cell": "4,2",
+      "fitness": 4.063,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "4,0",
-      "fitness": 3.9852,
+      "cell": "5,2",
+      "fitness": 3.9218,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "3,1",
-      "fitness": 3.6363,
+      "fitness": 4.0674,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "2,0",
-      "fitness": 3.8965,
+      "cell": "5,1",
+      "fitness": 4.0083,
       "improved": false,
       "origin": "mutation"
     },
     {
-      "cell": "2,0",
-      "fitness": 4.1721,
+      "cell": "4,2",
+      "fitness": 4.1203,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.9182,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "1,0",
-      "fitness": 3.4623,
+      "fitness": 3.6723,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 4.1238,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.0361,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.1349,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.2862,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,1",
+      "fitness": 4.3859,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,0",
+      "fitness": 3.6497,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.303,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,2",
+      "fitness": 4.3385,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.8916,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.7527,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,0",
+      "fitness": 4.2148,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.1782,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 4.1456,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.8458,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,1",
+      "fitness": 3.905,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.9334,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 3.924,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.2172,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.1794,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,2",
+      "fitness": 4.0678,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "0,1",
+      "fitness": 3.1556,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.3674,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.9013,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.935,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,0",
+      "fitness": 3.3664,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 3.961,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,1",
+      "fitness": 4.4105,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.6723,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.3353,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,2",
+      "fitness": 4.1028,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.2862,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.2172,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.0203,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.935,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.7679,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,2",
+      "fitness": 4.4714,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.0321,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.6723,
       "improved": false,
       "origin": "mutation"
     },
     {
       "cell": "2,0",
-      "fitness": 3.6533,
+      "fitness": 4.1844,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,0",
+      "fitness": 3.6573,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 3.9511,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.0724,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.0776,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.177,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.2049,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.766,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.1881,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.8617,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.3723,
+      "improved": true,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 3.8249,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.0094,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.7894,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.258,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.3723,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 3.8814,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,2",
+      "fitness": 4.3691,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,1",
+      "fitness": 4.2886,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.7058,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,0",
+      "fitness": 4.2138,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "2,2",
+      "fitness": 4.0673,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.6723,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,0",
+      "fitness": 3.6723,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,1",
+      "fitness": 3.7719,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "4,1",
+      "fitness": 4.1478,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "3,0",
+      "fitness": 4.2148,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "1,2",
+      "fitness": 3.5536,
+      "improved": false,
+      "origin": "mutation"
+    },
+    {
+      "cell": "5,1",
+      "fitness": 4.2862,
       "improved": false,
       "origin": "mutation"
     }

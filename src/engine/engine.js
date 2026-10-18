@@ -155,6 +155,13 @@ export class Engine {
       location: this.locationInfo(),
       clock: delveClock ? { ...delveClock } : null,
     });
+    // Cohesion is glue that has to be renewed
+    if (this.rules.cohesionDecayPerScene && this.state.cohesion > 0 && index > 0) {
+      const before = this.state.cohesion;
+      this.state.cohesion = Math.max(0, before - this.rules.cohesionDecayPerScene);
+      this.emit('cohesion.decay', { before, after: this.state.cohesion });
+    }
+    this.state.restedThisScene = new Set();
     // Scene-gated secrets
     this.#checkSecrets();
     // The Latent keeps pouring in, scene by scene
@@ -268,6 +275,18 @@ export class Engine {
       else if (m.invokedInScene === this.state.scene?.id) issues.push(`memory ${m.id} already invoked this scene`);
       else if (!intent.memory.reinterpretation) issues.push(`memory ${m.id} invoked without reinterpretation`);
       else out.memory = { id: m.id, reinterpretation: truncate(intent.memory.reinterpretation, 400) };
+    }
+
+    // v0.3: free rest add-on at landmarks (once per scene), alongside the main action
+    if (out.kind !== 'rest' && intent.rest && this.rules.restIsFreeAtLandmarks && this.location() && !this.location().isDelve) {
+      const hauntId = String(intent.rest.haunt ?? intent.rest.id ?? '').replace(/^haunt:/, '');
+      const memId = intent.rest.memory ?? intent.rest.memory_id;
+      const h = (this.location().haunts ?? []).find((hh) => hh.id === hauntId);
+      if (!h) issues.push(`rest: no haunt "${hauntId}" here`);
+      else if (this.state.restedThisScene?.has(actorId)) issues.push('rest: already rested this scene');
+      else if (!c.memories.find((m) => m.id === memId)) issues.push(`rest: memory "${memId}" does not exist`);
+      else if (out.memory?.id === memId) issues.push('rest: cannot spend the memory you are invoking');
+      else out.addRest = { haunt: h.id, memory: memId };
     }
 
     // Beat being pursued (advisory; the GM proposes hits, the engine validates)
@@ -384,6 +403,10 @@ export class Engine {
       this.emit('memory.invoke', { memory: m.id, before, reinterpretation: action.memory.reinterpretation, original: m.original, drift: +drift.toFixed(3) }, { actor: actorId });
     }
     for (const issue of action.issues) this.flag('intent', issue, actorId);
+    if (action.addRest) {
+      this.state.restedThisScene?.add(actorId);
+      this.rest({ actor: actorId, rest: action.addRest });
+    }
     if (action.guard) {
       this.state.guards[action.guard] = actorId;
       this.emit('guard.set', { ally: action.guard, name: this.char(action.guard).name }, { actor: actorId });
@@ -527,6 +550,7 @@ export class Engine {
         this.changeCone(shareWith, { reach: +1 }, 'care as advancement: carried another\'s stress');
       }
     }
+    const hurt = [];
     for (const [id, amt] of parts) {
       const c = this.char(id);
       if (c.dissolved) continue;
@@ -535,8 +559,13 @@ export class Engine {
       c.stress[resistance] += taken;
       const ev = this.emit('stress', { resistance, rolled: amt, die, protection: prot, taken, value: c.stress[resistance], total: this.totalStress(id), source }, { actor: id });
       results.push(ev.data);
-      if (taken > 0) this.#falloutCheck(id, resistance);
+      if (taken > 0) hurt.push(id);
     }
+    if (hurt.length > 1 && this.rules.sharedHitSingleFalloutCheck) {
+      // One hit, one fallout check: whoever now carries more total stress rolls it.
+      const id = hurt.reduce((a, b) => (this.totalStress(b) > this.totalStress(a) ? b : a));
+      this.#falloutCheck(id, resistance);
+    } else for (const id of hurt) this.#falloutCheck(id, resistance);
     return results;
   }
 

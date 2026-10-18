@@ -244,7 +244,11 @@ export class MockPlayer {
     const memory = mem ? { id: mem.id, reinterpretation: (VOICE[this.id]?.remember ?? ((t) => t))(mem.text) } : null;
     const hurtAlly = view.allies.filter((a) => a.total >= 5).sort((a, b) => b.total - a.total)[0];
     const share = r.next() < this.cooperation ? view.allies[0]?.id ?? null : null;
-    const base = { intent: '', say: this.#say(), memory, beat: openBeat, guard: share, theorize: null };
+    // Free rest at landmarks when hurt (v0.3), never spending the memory being invoked
+    const spare = you.memories.filter((m) => m.id !== mem?.id);
+    const rest = view.location?.isDelve === false && view.location?.haunts?.length && you.total >= 4 && spare.length > 1
+      ? { haunt: r.pick(view.location.haunts).id, memory: spare.at(-1).id } : null;
+    const base = { intent: '', say: this.#say(), memory, beat: openBeat, guard: share, theorize: null, rest };
     const skillFor = (pref) => pref.find((s) => you.skills.includes(s)) ?? pref[0];
 
     if (!view.theory && view.clues.length >= 3 && (kind === 'finale' || (kind === 'landmark' && view.scene.id === 'library' && r.next() < 0.5))) {

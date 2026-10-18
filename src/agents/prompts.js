@@ -182,13 +182,16 @@ export function playerActPrompt(view) {
     view.theory ? `CANON THEORY: ${view.theory}` : '',
     `FACTS: ${j(view.facts)}`,
     `RECENT (as far back as your horizon lets you hold): ${j(view.recent)}`,
+    (view.location?.isDelve === false && view.location?.haunts?.length)
+      ? `FREE THIS TURN (once per scene, does not use your action): "rest": {"haunt": id, "memory": memory id} — spend one memory at a haunt to clear stress and gain 1 Resolve. Haunts here: ${j(view.location.haunts.map((h) => ({ id: h.id, name: h.name, clears: `${h.resistance} up to d${h.die}` })))}`
+      : '',
     'RULES YOU CAN USE: Resolve is spent automatically for +1 die on desperate rolls. Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
     `SKILLS: ${j(SKILL_INFO)}`,
     `DOMAINS: ${j(DOMAIN_INFO)}`,
     `TARGETS AVAILABLE (put ONLY the bare "target" value in your reply, e.g. "delve" or "npc:clerk"): ${j(targets)}`,
     theorizeOk ? 'You may THEORIZE instead: propose what is ingressing and list the clue ids your theory accounts for. More clues = better odds. A wrong theory hurts.' : '',
     view.forceMemory ? 'THE AUDIENCE DEMANDS: you must invoke and reinterpret a memory this turn.' : '',
-    'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "guard": ally id — until your next turn you take half of any stress that ally suffers (builds cohesion; together the party perceives more) — or null, "theorize": {"theory": string, "clues": [ids]} or null}',
+    'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "guard": ally id — until your next turn you take half of any stress that ally suffers (builds cohesion; together the party perceives more) — or null, "theorize": {"theory": string, "clues": [ids]} or null, "rest": {"haunt": id, "memory": memory id} or null}',
   ].filter(Boolean).join('\n');
 }
 

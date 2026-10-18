@@ -15,6 +15,8 @@ npm test                                   # 13 engine/reviewer tests
 npm run play:mock                          # full session with scripted agents, prints the transcript
 node cli/run.js --config config/agents.example.json --review   # LLM agents (needs ANTHROPIC_API_KEY)
 node cli/review.js sessions/<file>.json    # (re)review a session → .review.md / .review.json
+node cli/compare.js a.review.json b.review.json   # side-by-side metrics for A/B iteration
+node cli/run.js --config <cfg> --rules config/rules/v0.3-candidate.json   # layer a rule variant
 node cli/explore.js --iterations 120       # MAP-Elites over rule variants → explorer/report.md
 node cli/serve.js                          # viewer at http://localhost:8787
 ```

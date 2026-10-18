@@ -164,3 +164,31 @@ test('player prompt shows what moves each entity', async () => {
   const e = mk(); e.start(); e.enterScene(2);
   assert.match(playerActPrompt(e.playerView('ilse2')), /Moved by: Reshape, Mend/);
 });
+
+test('v0.3: a shared hit makes one fallout check, not two', () => {
+  const e = mk(); e.start(); e.enterScene(1);
+  e.declare('choir', { say: 'Lean on us.', target: 'none', guard: 'sort7' });
+  e.inflict('sort7', 'boundary', 8);
+  assert.equal(e.events.filter((ev) => ev.type === 'fallout.check').length, 1);
+  const legacy = mk({ sharedHitSingleFalloutCheck: false }); legacy.start(); legacy.enterScene(1);
+  legacy.declare('choir', { say: 'Lean on us.', target: 'none', guard: 'sort7' });
+  legacy.inflict('sort7', 'boundary', 8);
+  assert.equal(legacy.events.filter((ev) => ev.type === 'fallout.check').length, 2);
+});
+
+test('v0.3: cohesion decays each scene', () => {
+  const e = mk(); e.start(); e.enterScene(1);
+  e.state.cohesion = 4;
+  e.enterScene(2);
+  assert.equal(e.state.cohesion, 3);
+});
+
+test('v0.3: resting rides along with an action at landmarks, once per scene', () => {
+  const e = mk(); e.start(); e.enterScene(2); // garden
+  e.char('ilse2').stress.substrate = 6;
+  const a = e.declare('ilse2', { do: 'read the beds', target: 'clue', skill: 'Discern', rest: { haunt: 'warm-bed', memory: 'm3' } });
+  assert.equal(a.kind, 'act');
+  assert.ok(e.events.some((ev) => ev.type === 'haunt.rest' && ev.actor === 'ilse2'));
+  const again = e.validateAction('ilse2', { target: 'clue', rest: { haunt: 'warm-bed', memory: 'm1' } });
+  assert.ok(!again.addRest);
+});

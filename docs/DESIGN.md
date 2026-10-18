@@ -111,6 +111,61 @@ The first session's review traced almost every failure to one engine bug: agents
 - Desperate rolls succeed 71% of the time, so the tier minimums or the desperate difficulty may need raising.
 - Fitness fell from 4.29 to 3.97, entirely because of the dead-mechanic penalty. Read the composite next to the findings, not on its own.
 
+### Iteration 2 → v0.2 (from second-light's review)
+
+**Diagnosis**
+- Agents could not see what moved each entity.
+- Stress sharing only fired if the sharer was hurt on that same action.
+- Resting was never worth a memory.
+- Position changed only the stress die, not the odds.
+
+**Changes**
+- Each entity's persuadability is shown in the target menu.
+- A persistent **guard** move: take half of an ally's stress until your next turn.
+- Desperate drops one more die but pays one effect step more.
+- Resting grants Resolve.
+- The reviewer now separates *choices* nobody made (failures) from *consequences* that didn't occur (variance).
+
+### Iteration 3 → v0.3 (from third-light's review)
+
+| | first | second | third (v0.2) |
+|---|---|---|---|
+| Talk-only turns | 16 | 0 | 0 |
+| Agency | 58% | 95% | 100% |
+| Desperate success | 50% (n=2) | 71% (n=7) | 29% (n=7) |
+| Guards / stress shared | 0 / 1 | 0 / 0 | 19 / 16 |
+| Acts on entities | 3 | 3 | 6 |
+| Fallouts (major) | 2 (0) | 4 (0) | 19 (2) |
+| Dead choices | haunts, guard, clues | haunts, guard | haunts |
+| Ending | unread | chosen | unread |
+
+v0.2 worked: desperate felt desperate, guarding and persuasion got used. It also overcorrected:
+- A shared hit rolled fallout for *both* entities, so sharing multiplied fallout. That is the opposite of stress as glue.
+- Cohesion never decayed (it reached 16).
+- Haunts still cost a whole turn.
+
+**v0.3 changes**
+- A shared hit makes one fallout check, rolled by the more-stressed sharer.
+- Cohesion decays by 1 per scene.
+- At landmarks, resting is a free add-on to an action, once per scene.
+
+Measured over 40 scripted seeds with heavy guarding:
+
+| | v0.2 rules | v0.3 rules |
+|---|---|---|
+| Fallout per roll | 0.68 | 0.54 |
+| Peak cohesion | 10.8 | 8.3 |
+| Rests per session | 0.1 | 1.4 |
+
+**Explorer candidate.** The top MAP-Elites cells on v0.3 share one pattern: risky stress d4, landmarks two rounds, delves one round, delveScale 0.8, Attractor 8. It reaches ~28% fallout with no dead mechanics. It is saved as `config/rules/v0.3-candidate.json` and is **not** the default until an LLM A/B confirms it:
+
+```bash
+node cli/run.js --config <cfg> --rules config/rules/v0.3-candidate.json --review
+node cli/compare.js sessions/a.review.json sessions/b.review.json
+```
+
+**Seat-agent discipline.** In three of the bridge playtests, a Haiku seat made one stray read-only tool call outside its instructions: a browser-tab check, device info, and a granted-apps listing. Nothing changed, but long-running seat agents should get an explicit tool allowlist, not just instructions.
+
 ## 10. Known limits and next steps
 
 - Bridge seats keep their own conversation history, so a player agent may remember further back than its Horizon allows. API-driven seats are stateless per call and do respect it.

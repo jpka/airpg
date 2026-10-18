@@ -12,6 +12,12 @@ import { renderMarkdown } from '../src/reviewer/report.js';
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.slice(2), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : true] : null).filter(Boolean));
 const config = JSON.parse(await fs.readFile(args.config ?? 'config/agents.mock.json', 'utf8'));
 if (args.seed) config.seed = args.seed;
+if (args.rules) { // --rules config/rules/x.json : a rule diff layered over the config's rules
+  const diff = JSON.parse(await fs.readFile(args.rules, 'utf8'));
+  delete diff._why;
+  config.rules = { ...(config.rules ?? {}), ...diff };
+  config.label = `${config.label ?? 'session'} · ${path.basename(args.rules, '.json')}`;
+}
 const run = buildRun(config, process.env);
 const names = Object.fromEntries(run.cast.map((c) => [c.id, c.name]));
 const quiet = !!args.quiet;
