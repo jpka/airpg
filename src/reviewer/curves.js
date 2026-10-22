@@ -31,6 +31,10 @@ const MECH = {
   'stress.heal': () => 0.3,
   'npc.moved': () => 0.4,
   'cone.change': (e) => Math.sign((e.data.after.reach + e.data.after.horizon) - (e.data.before.reach + e.data.before.horizon)) * 0.4,
+  // v0.4 deck: what clogs a hand is bad news, what a haunt lets you set down is relief, a drafted card is a gift
+  'deck.gain': (e) => (['condition', 'compel', 'gap', 'voice'].includes(e.data.card?.type) ? -0.3 : 0),
+  'deck.remove': (e) => (/^set down/.test(e.data.why ?? '') ? 0.3 : 0),
+  'deck.draft': (e) => (e.data.card ? 0.2 : 0),
 };
 
 const TEXT_TYPES = new Set(['scene.frame', 'outcome', 'character.intro', 'dialogue', 'ending.narrate', 'character.epilogue', 'fallout']);

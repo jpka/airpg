@@ -199,8 +199,10 @@ export function playerActPrompt(view) {
   const theorizeOk = !view.theory && view.clues.length >= 2;
   return [
     `SCENE: ${j(view.scene)}  LOCATION: ${j({ name: view.location?.name, tier: view.location?.tier, description: view.location?.description, domains: view.location?.domains })}`,
-    `YOU: ${j({ stress: view.you.stress, protection: view.you.protection, skills: view.you.skills, domains: view.you.domains, knack: view.you.knack, cone: view.you.cone, resolve: view.you.resolve, conditions: view.you.conditions, compels: view.you.compels })}`,
-    `YOUR MEMORIES (invoke one for +1 die, but you must reinterpret it — retell it with a new emphasis): ${j(view.you.memories)}`,
+    `YOU: ${j({ stress: view.you.stress, protection: view.you.protection, skills: view.you.skills, domains: view.you.domains, knack: view.you.knack, cone: view.you.cone, ...(deck ? {} : { resolve: view.you.resolve }), conditions: view.you.conditions, compels: view.you.compels })}`,
+    deck
+      ? `YOUR MEMORIES (only one whose card is in your hand can be invoked this turn): ${j(view.you.memories)}`
+      : `YOUR MEMORIES (invoke one for +1 die, but you must reinterpret it — retell it with a new emphasis): ${j(view.you.memories)}`,
     `YOUR BEATS: ${j(view.you.beats)}`,
     `ALLIES: ${j(view.allies.map((a) => ({ id: a.id, name: a.name, total_stress: a.total, fallouts: a.fallouts })))}`,
     `WHAT YOU CAN PERCEIVE (your light cone, reach ${view.reach}): ${j(view.clocks)}`,
@@ -228,8 +230,11 @@ function deckRules(view) {
   return [
     `YOUR HAND (${d.hand.length} cards; your hand size is 3 + your Horizon): ${j(handForPrompt(d))}`,
     `YOUR DECK: ${d.drawPile} to draw, ${d.discardPile} discarded. Your deck is who you are: skills, domains, memories, your flaw, your drive, and what has happened to you.`,
-    `HOW CARDS PLAY: list card ids in "play". At most ONE Move (it sets your skill: +1 die, a knack +2). Up to ${d.edgesAllowed} Edge(s) add dice: a domain only where the place has it, a Memory only with a retelling, your Drive only if the act leans the way you lean, your flaw only with the Moves it names. Guard and Compel cards are free. Status cards cannot be played; they hurt while held. No Move card that fits? Play any Move anyway (narrate how), or improvise: set "skill", base die only. Whatever you do not play is discarded at the end of your turn.`,
+    `HOW CARDS PLAY: list card ids in "play". At most ONE Move (it sets your skill: +1 die, a knack +2, on ANY target; how it fits is yours to narrate). Up to ${d.edgesAllowed} Edge(s) add dice: a domain only where the place has it, a Memory only with a retelling, your Drive only if the act leans the way you lean, your flaw only with the Moves it names. Guard and Compel cards are free. Status cards cannot be played; they hurt while held. No Move card that fits? Play any Move anyway (narrate how), or improvise: set "skill", base die only. Whatever you do not play is discarded at the end of your turn.`,
     d.lastMove && d.hand.some((k) => k.kind === 'compel') ? `Your last Move was ${d.lastMove}: play your Compel card with a ${d.lastMove} Move to discard it, or it costs 1 Coherence at the end of your turn.` : '',
+    (view.location?.isDelve === false && view.location?.haunts?.length && d.cards.some((k) => k.removable))
+      ? `CARDS YOU COULD SET DOWN AT A HAUNT ("remove"): ${j(d.cards.filter((k) => k.removable).map((k) => ({ id: k.uid, name: k.name, type: k.type })))}`
+      : '',
     d.offer ? `REWARD (${d.offer.why}): choose ONE card to add to your deck, or null: ${j(d.offer.cards.map((k) => ({ id: k.offerId, name: k.name, kind: k.kind, text: k.text })))}` : '',
     'OTHER RULES: Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
   ].filter(Boolean).join('\n');

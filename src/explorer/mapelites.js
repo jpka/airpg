@@ -26,6 +26,8 @@ export const SPACE = {
   delveScale: [0.6, 0.8, 1, 1.2, 1.5],
   'clockSizes.ingression': [6, 8, 10, 12],
   'clockSizes.attractor': [4, 6, 8],
+  'deck.handBase': [2, 3, 4],
+  'deck.edgesPerTurn': [1, 2, 3],
 };
 export const POLICY = { harshness: [0.2, 0.5, 0.8], cooperation: [0.1, 0.4, 0.7] };
 

@@ -221,3 +221,15 @@ test('deck sessions are deterministic, and a human seat can play through one', a
   assert.ok(session.events.some((e) => e.type === 'agent.call' && e.data.human));
   assert.ok(session.events.some((e) => e.type === 'deck.play' && e.actor === 'ilse2'));
 });
+
+test('a second draft offer waits behind the first instead of replacing it', () => {
+  const e = mk(); e.enterScene(2);
+  const first = e.char('sort7').deck.offer;
+  e.offerDraft('sort7', 'major beat: test');
+  assert.equal(e.char('sort7').deck.offer, first);
+  e.declare('sort7', { say: 'One.', target: 'none', draft: first.cards[0].offerId });
+  assert.equal(e.char('sort7').deck.offer.why, 'major beat: test');
+  e.declare('sort7', { say: 'Two.', target: 'none', draft: null });
+  assert.equal(e.char('sort7').deck.offer, null);
+  assert.equal(e.events.filter((ev) => ev.type === 'deck.draft' && ev.actor === 'sort7').length, 2);
+});

@@ -1,6 +1,7 @@
 // LATENT spectator viewer. Replays (or follows live) a session event log.
 // Rendering is a pure function of (events[0..cursor]); scrubbing just re-reduces.
 import { sigil, coneGlyph, ringClock } from './sigils.js';
+import { mountSeat, defaultReply } from './seat.js';
 import { reviewSession } from '../src/reviewer/review.js';
 import { renderMarkdown } from '../src/reviewer/report.js';
 import { runSession } from '../src/runner/session.js';
@@ -19,6 +20,7 @@ const S = {
   session: null, review: null, cursor: 0, playing: false, timer: null, speed: 1,
   backstage: store.get('latent.backstage', false), clean: false,
   clip: null, live: null, manifest: [], current: null,
+  human: null, // { seat, pending: { req, resolve } | null } while a person plays a seat
 };
 const GM_LOOK = { shape: 'aperture', hue: 268 };
 const NPC_LOOK = { shape: 'npc', hue: 46 };
@@ -37,6 +39,7 @@ function fresh(session) {
     scene: null, location: null, caption: null, overlay: null, active: null,
     facts: [], clues: [], memlog: [], beats: {}, theory: null, ending: null,
     turnStart: 0, lastStakes: null, pulse: null, delveId: null,
+    hands: {}, played: {}, decks: {},
   };
 }
 
@@ -98,14 +101,21 @@ function reduce(st, e) {
     case 'npc.moved': st.overlay = { type: 'note', e, k: 'Persuaded', t: `${d.name} is moved.` }; break;
     case 'ending': st.ending = d; st.overlay = { type: 'note', e, k: `Ending · ${d.ending}`, t: d.text }; break;
     case 'session.abort': st.overlay = { type: 'note', e, k: 'Stopped', t: d.reason }; break;
+    case 'deck.build': st.decks[e.actor] = { size: d.size, handSize: d.handSize }; break;
+    case 'deck.draw': st.hands[e.actor] = d.hand; st.played[e.actor] = []; if (st.decks[e.actor]) st.decks[e.actor].handSize = d.handSize; break;
+    case 'deck.play': st.played[e.actor] = [d.move, ...(d.edges ?? []), d.guard, d.compel].filter(Boolean).map((k) => k.uid); st.overlay = { type: 'cards', e }; break;
+    case 'deck.discard': st.hands[e.actor] = null; break;
+    case 'deck.gain': if (st.decks[e.actor]) st.decks[e.actor].size++; st.overlay = { type: 'card', e, k: `New card · ${d.why}`, t: d.card.text }; break;
+    case 'deck.remove': if (st.decks[e.actor]) st.decks[e.actor].size--; st.overlay = { type: 'card', e, k: `Card leaves the deck · ${d.why}`, t: `${st.names[e.actor]} will not draw ${d.card.name} again.` }; break;
+    case 'deck.draft': if (d.card) st.overlay = { type: 'card', e, k: `Draft · ${d.why}`, t: `${st.names[e.actor]} takes ${d.card.name}${d.offered?.length > 1 ? ` over ${d.offered.filter((x) => x !== d.card.name).join(' and ')}` : ''}.` }; break;
     default: break;
   }
   if (P && e.type === 'fallout' && P.tags.length > 3) P.tags = P.tags.slice(-3);
   return st;
 }
 
-const VISIBLE = new Set(['scene.enter', 'scene.frame', 'character.intro', 'action.declare', 'outcome', 'dialogue', 'character.epilogue', 'ending.narrate', 'stakes.set', 'roll', 'fallout', 'clock.complete', 'clue.found', 'secret.unlock', 'memory.invoke', 'memory.rewrite', 'memory.lose', 'haunt.rest', 'beat.hit', 'stress.share', 'cone.change', 'algotype.reveal', 'character.dissolve', 'theorize', 'complication', 'delve.forced', 'audience.ingress', 'npc.moved', 'ending', 'stress.heal', 'session.abort', 'guard.set']);
-function isVisible(e) { return VISIBLE.has(e.type) || (e.type === 'fallout.check' && e.data.result !== 'none'); }
+const VISIBLE = new Set(['deck.draw', 'deck.play', 'deck.gain', 'deck.remove', 'deck.draft', 'scene.enter', 'scene.frame', 'character.intro', 'action.declare', 'outcome', 'dialogue', 'character.epilogue', 'ending.narrate', 'stakes.set', 'roll', 'fallout', 'clock.complete', 'clue.found', 'secret.unlock', 'memory.invoke', 'memory.rewrite', 'memory.lose', 'haunt.rest', 'beat.hit', 'stress.share', 'cone.change', 'algotype.reveal', 'character.dissolve', 'theorize', 'complication', 'delve.forced', 'audience.ingress', 'npc.moved', 'ending', 'stress.heal', 'session.abort', 'guard.set']);
+function isVisible(e) { return VISIBLE.has(e.type) && !(e.type === 'deck.draft' && !e.data.card) || (e.type === 'fallout.check' && e.data.result !== 'none'); }
 
 function duration(e) {
   const d = e.data ?? {};
@@ -123,6 +133,9 @@ function duration(e) {
     case 'fallout.check': return 1300;
     case 'clock.tick': return 600;
     case 'stress': return 350;
+    case 'deck.draw': return 1300;
+    case 'deck.play': return 2100;
+    case 'deck.gain': case 'deck.remove': case 'deck.draft': return 2400;
     default: return isVisible(e) ? 2200 : 0;
   }
 }
@@ -180,6 +193,11 @@ function render(animate = false) {
   const bs = $('#backstage');
   bs.hidden = !S.backstage;
   if (S.backstage) bs.innerHTML = backstageHtml(st) || '<b>Backstage</b> · nothing private this beat.';
+  // The active entity's hand: spectators see what it could have played, and what it did
+  const handEl = $('#hand');
+  const hand = st.active ? st.hands[st.active] : null;
+  handEl.hidden = !hand?.length;
+  if (hand?.length) handEl.innerHTML = hand.map((k) => miniCard(k, { played: st.played[st.active]?.includes(k.uid) })).join('');
   // Party
   const party = $('#party');
   party.style.setProperty('--n', st.order.length);
@@ -200,6 +218,7 @@ function render(animate = false) {
   field.tension = S.review?.curves?.tension?.[S.cursor] ?? 0.3;
   if (!$('#panel-ledger').hidden) renderLedger();
   updateChartCursor();
+  updateCatchup();
 }
 
 function shortClock(c) {
@@ -268,6 +287,11 @@ function overlayHtml(o, st) {
     case 'beat': return `<div class="ov-k">${d.tier} beat · ${esc(name)}</div><div class="ov-t">${esc(d.text)}</div>${d.why ? `<div class="note">${esc(d.why)}</div>` : ''}`;
     case 'theory': return `<div class="ov-k">Theorize · ${esc(name)}</div><div class="ov-hook">“${esc(d.theory)}”</div><div class="ov-row"><div class="dice">${d.dice.map((v) => `<div class="die kept"><span>${v}</span></div>`).join('')}</div><span class="mono">+${d.accepted.length} clues −${d.complexity} = ${d.total}</span><span class="band ${d.result}">${d.result === 'false' ? 'False' : d.result === 'great' ? 'True!' : 'True'}</span></div>`;
     case 'note': return `<div class="ov-k">${esc(o.k)}</div><div class="note">${esc(o.t)}</div>`;
+    case 'cards': {
+      const cards = [d.move, ...(d.edges ?? []), d.guard, d.compel].filter(Boolean);
+      return `<div class="ov-k">${esc(name)} plays${d.improvised ? ` · improvising ${esc(d.improvised)} (no Move card)` : ''}</div><div class="minis">${cards.map((k) => miniCard(k, { played: true, big: true })).join('') || '<span class="note">No card: base die only.</span>'}</div>`;
+    }
+    case 'card': return `<div class="ov-k">${esc(o.k)} · ${esc(name)}</div><div class="ov-row">${miniCard(d.card, { big: true })}<div class="note" style="flex:1;min-width:0">${esc(o.t)}</div></div>`;
     default: return '';
   }
 }
@@ -304,8 +328,38 @@ function pcHtml(st, id) {
   return `<div class="pc ${st.active === id ? 'active' : ''} ${p.dissolved ? 'gone' : ''}">
     <div class="pc-top"><div class="sigil">${sigil(p.look, 22, id)}</div><div class="pc-name">${esc(p.name)}</div></div>
     <div class="res">${bars}</div><div class="res-l"><span>S</span><span>C</span><span>M</span><span>B</span><span>R</span></div>
-    <div class="pc-meta"><span class="cone" title="Light cone: reach ${p.cone.reach}, horizon ${p.cone.horizon}">${coneGlyph(p.cone)}</span><span>◇${p.memories}</span></div>
+    <div class="pc-meta"><span class="cone" title="Light cone: reach ${p.cone.reach}, horizon ${p.cone.horizon}">${coneGlyph(p.cone)}</span><span title="memories${st.decks[id] ? ' · cards in deck' : ''}">◇${p.memories}${st.decks[id] ? ` ▤${st.decks[id].size}` : ''}</span></div>
     <div class="pc-tags">${esc(tags.join(' · '))}</div></div>`;
+}
+
+function miniCard(k, { played = false, big = false } = {}) {
+  if (!k) return '';
+  const b = k.bonus ? `+${k.bonus}` : k.kind === 'status' ? '✕' : k.kind === 'guard' || k.kind === 'compel' ? 'free' : '';
+  return `<span class="mini kind-${k.kind} t-${k.type}${played ? ' played' : ''}${big ? ' big' : ''}" title="${esc(k.name)} — ${esc(k.text)}"><span class="b">${esc(b)}</span><span class="n">${esc(k.name)}</span></span>`;
+}
+
+// ------------------------------------------------------------------ the human seat
+// The runner awaits humanUI.request(); the seat panel renders it and resolves on submit.
+const humanUI = {
+  request: (req) => new Promise((resolve) => {
+    S.human.pending = { req, resolve };
+    const host = $('#seat');
+    host.hidden = false;
+    mountSeat(host, req, {
+      onSubmit: (reply) => { S.human.pending = null; resolve(reply); $('#yourTurn').hidden = true; $('#seat').classList.add('waiting'); },
+      onSkip: () => { pause(); seek(S.session.events.length - 1); play(); },
+    });
+    host.classList.remove('waiting');
+    $('#yourTurn').hidden = false;
+    updateCatchup();
+  }),
+};
+function updateCatchup() {
+  const box = document.querySelector('#seat .catchup');
+  if (!box || !S.human?.pending || !S.session) return;
+  const behind = S.session.events.slice(S.cursor + 1).filter(isVisible).length;
+  box.hidden = behind === 0;
+  box.querySelector('span').textContent = `The story is ${behind} beat${behind === 1 ? '' : 's'} behind your turn.`;
 }
 
 // ------------------------------------------------------------------ playback
@@ -497,6 +551,8 @@ function renderLive() {
       <div class="seats">
         <label>Seat 1${pick(0, 'choir')}</label><label>Seat 2${pick(1, 'sort7')}</label><label>Seat 3${pick(2, 'ilse2')}</label>
       </div>
+      <label>You play<select id="humanSeat"><option value="">nobody: watch the agents</option>${[0, 1, 2].map((i) => `<option value="${i}" ${String(saved.human ?? '') === String(i) ? 'selected' : ''}>Seat ${i + 1}</option>`).join('')}</select></label>
+      <label><span><input type="checkbox" id="legacyRules" ${saved.legacy ? 'checked' : ''} style="width:auto"> v0.3 rules (no deck; agents only)</span></label>
       <div class="seats">
         <label>GM model tier${tier('gmTier', saved.gmTier ?? 'default')}</label>
         <label>Player model tier${tier('plTier', saved.plTier ?? 'quick')}</label>
@@ -511,14 +567,31 @@ function renderLive() {
         <button class="btn" id="runMock">Run scripted (offline)</button>
         <button class="btn" id="stopRun" disabled>Stop</button>
       </div>
-      <p class="note">${sampleFn ? 'Claude runs every seat on your own Claude account. Calls are made one at a time, only after you press Run, and stop at the budget; leftover seats finish on scripted agents. Expect a few minutes on quick tiers.' : 'Live Claude play is available when this page is opened on claude.ai. Here you can run scripted agents, or run LLM sessions from the command line (<span class="mono">node cli/run.js</span>) and open the file.'}</p>
+      <p class="note">Take a seat and you play that entity as a deck: each turn you draw a hand (3 + your Horizon), play one Move and up to two Edges, and the engine rolls. Your flaw, your hidden drive and every fallout are cards too.</p>
+      <p class="note">${sampleFn ? 'Claude runs every other seat on your own Claude account. Calls are made one at a time, only after you press Run, and stop at the budget; leftover seats finish on scripted agents. Expect a few minutes on quick tiers.' : 'Live Claude play is available when this page is opened on claude.ai. Here you can run scripted agents, or run LLM sessions from the command line (<span class="mono">node cli/run.js</span>) and open the file.'}</p>
       <div id="liveStatus" class="mono note"></div>
     </div>
     <div class="card"><div class="k">Audience ingress (one per scene)</div><p class="note">While a session runs, push the Latent. The engine caps it, so the agents keep their agency.</p>
       <div class="aud">${APERTURE.audience.map((a) => `<button class="btn" data-aud="${a.id}" disabled title="${esc(a.text)}">${esc(a.label)}</button>`).join('')}</div><div id="audStatus" class="mono note"></div></div>`;
+  const label = () => {
+    const i = $('#humanSeat').value;
+    const who = i === '' ? null : ENTITIES[$(`#cast${i}`).value]?.name;
+    $('#humanSeat').querySelectorAll('option[value]:not([value=""])').forEach((o) => (o.textContent = `Seat ${+o.value + 1} · ${ENTITIES[$(`#cast${o.value}`).value]?.name}`));
+    $('#runMock').textContent = who ? `Play ${who} (scripted table)` : 'Run scripted (offline)';
+    if ($('#runClaude')) $('#runClaude').textContent = who ? `Play ${who} with Claude` : 'Run with Claude';
+    $('#legacyRules').disabled = !!who;
+  };
+  for (const id of ['humanSeat', 'cast0', 'cast1', 'cast2']) $(`#${id}`).addEventListener('change', label);
+  label();
   $('#runMock').addEventListener('click', () => startLive('mock'));
   $('#runClaude')?.addEventListener('click', () => startLive('claude'));
-  $('#stopRun').addEventListener('click', () => { if (S.live) { S.live.stop = true; S.live.ctl?.abort(); } });
+  $('#stopRun').addEventListener('click', () => {
+    if (!S.live) return;
+    S.live.stop = true; S.live.ctl?.abort();
+    const p = S.human?.pending; // release a runner waiting on you, so it can stop
+    if (p) { S.human.pending = null; p.resolve(defaultReply(p.req)); }
+  });
+  $('#yourTurn').addEventListener('click', () => $('#seat').scrollIntoView({ behavior: 'smooth', block: 'start' }));
   el.querySelectorAll('[data-aud]').forEach((b) => b.addEventListener('click', () => { if (S.live?.running) { S.live.audience = b.dataset.aud; $('#audStatus').textContent = `Queued: ${b.textContent} — lands at the next scene.`; } }));
 }
 
@@ -526,20 +599,24 @@ async function startLive(mode) {
   if (S.live?.running) return;
   const cast = [0, 1, 2].map((i) => $(`#cast${i}`).value);
   if (new Set(cast).size < 3) { $('#liveStatus').textContent = 'Pick three different entities.'; return; }
-  const opts = { cast, gmTier: $('#gmTier').value, plTier: $('#plTier').value, pacing: $('#pacing').value, budget: +$('#budget').value || 80, seed: $('#seed').value || 'night', gmStyle: $('#gmStyle').value, validator: $('#validator').checked };
+  const opts = { cast, gmTier: $('#gmTier').value, plTier: $('#plTier').value, pacing: $('#pacing').value, budget: +$('#budget').value || 80, seed: $('#seed').value || 'night', gmStyle: $('#gmStyle').value, validator: $('#validator').checked, human: $('#humanSeat').value, legacy: $('#legacyRules').checked };
   store.set('latent.live', opts);
   const ctl = new AbortController();
+  const humanId = opts.human === '' ? null : cast[+opts.human];
   const rules = opts.pacing === 'short' ? { roundsPerScene: { prologue: 0, delve: 1, landmark: 1, finale: 1 } } : {};
+  if (opts.legacy && !humanId) rules.deck = { enabled: false };
   const config = {
-    label: mode === 'claude' ? 'live · Claude' : 'live · scripted', scenario: 'aperture', cast, seed: opts.seed, rules,
-    providers: { claude: { type: 'sample', modelTier: 'quick' } },
+    label: `${mode === 'claude' ? 'live · Claude' : 'live · scripted'}${humanId ? ` · you play ${ENTITIES[humanId].name}` : ''}`, scenario: 'aperture', cast, seed: opts.seed, rules,
+    providers: { claude: { type: 'sample', modelTier: 'quick' }, you: { type: 'human' } },
     gm: mode === 'claude' ? { provider: 'claude', tier: opts.gmTier, style: opts.gmStyle } : { provider: 'mock' },
-    players: { default: mode === 'claude' ? { provider: 'claude', tier: opts.plTier } : { provider: 'mock' } },
+    players: { default: mode === 'claude' ? { provider: 'claude', tier: opts.plTier } : { provider: 'mock' }, ...(humanId ? { [humanId]: { provider: 'you' } } : {}) },
     validator: mode === 'claude' && opts.validator ? { provider: 'claude', tier: 'quick' } : { provider: 'mock' },
     budget: { maxCalls: opts.budget },
   };
   let run;
-  try { run = buildRun(config, {}, { sampleFn, signal: ctl.signal }); } catch (err) { $('#liveStatus').textContent = `Could not start: ${err.message}`; return; }
+  try { run = buildRun(config, {}, { sampleFn, signal: ctl.signal, humanUI }); } catch (err) { $('#liveStatus').textContent = `Could not start: ${err.message}`; return; }
+  S.human = humanId ? { seat: humanId, pending: null } : null;
+  $('#seat').hidden = true; $('#seat').replaceChildren();
   const session = { format: 'latent.session/1', meta: { ...run.meta, seed: run.seed, scenario: 'aperture', live: true }, events: [] };
   S.live = { running: true, stop: false, ctl, audience: null, calls: 0 };
   pause();
@@ -557,8 +634,8 @@ async function startLive(mode) {
       hooks: {
         onEvent: (e) => {
           session.events.push(structuredClone(e));
-          if (e.type === 'agent.call' && !e.data.mock) { S.live.calls++; }
-          if (e.type === 'agent.call') status.textContent = `${S.live.calls} Claude call${S.live.calls === 1 ? '' : 's'} · last: ${e.data.agent}.${e.data.tag} ${e.data.ok ? `${(e.data.ms / 1000).toFixed(1)}s` : `failed (${e.data.error})`}`;
+          if (e.type === 'agent.call' && !e.data.mock && !e.data.human) { S.live.calls++; }
+          if (e.type === 'agent.call' && !e.data.human) status.textContent = `${S.live.calls} Claude call${S.live.calls === 1 ? '' : 's'} · last: ${e.data.agent}.${e.data.tag} ${e.data.ok ? `${(e.data.ms / 1000).toFixed(1)}s` : `failed (${e.data.error})`}`;
           if (!started && session.events.length > 1) { started = true; play(); }
           if (!S.playing) render();
         },
@@ -574,6 +651,8 @@ async function startLive(mode) {
     status.textContent = `Stopped: ${err?.code ?? err?.message ?? err}`;
   } finally {
     S.live.running = false;
+    $('#yourTurn').hidden = true;
+    if (S.human) { $('#seat').classList.add('waiting'); $('#seat').insertAdjacentHTML('beforeend', '<p class="note">The session is over. Your choices are in the session file; the review is in the Review tab.</p>'); }
     $('#stopRun').disabled = true;
     document.querySelectorAll('[data-aud]').forEach((b) => (b.disabled = true));
     $('#runMock').disabled = false; if ($('#runClaude')) $('#runClaude').disabled = false;
@@ -650,7 +729,7 @@ bsBtn.setAttribute('aria-pressed', String(S.backstage));
 bsBtn.addEventListener('click', () => { S.backstage = !S.backstage; store.set('latent.backstage', S.backstage); bsBtn.setAttribute('aria-pressed', String(S.backstage)); render(); });
 $('#bClean').addEventListener('click', (e) => { S.clean = !S.clean; e.currentTarget.setAttribute('aria-pressed', String(S.clean)); $('#stage').classList.toggle('clean', S.clean); });
 document.addEventListener('keydown', (e) => {
-  if (e.target.matches('input, textarea, select')) return;
+  if (e.target.matches('input, textarea, select') || e.target.closest('#seat')) return;
   if (e.key === ' ') { e.preventDefault(); S.playing ? pause() : play(); }
   if (e.key === 'ArrowRight') { pause(); seek(nextVisible(S.cursor, 1)); }
   if (e.key === 'ArrowLeft') { pause(); seek(nextVisible(S.cursor, -1)); }

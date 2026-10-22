@@ -1,9 +1,9 @@
 // Deck mechanics: zones, draws, shuffles. Pure data operations; the engine owns
 // the RNG and emits the events. A deck is { draw, hand, discard, exhaust, removed }
-// plus bookkeeping (pending draft offer, last Move played, Drive plays).
+// plus bookkeeping (the draft offer on the table and any queued behind it, last Move played, Drive plays).
 
 export function makeDeck() {
-  return { draw: [], hand: [], discard: [], exhaust: [], removed: [], uids: [], offer: null, lastMove: null, drivePlays: 0 };
+  return { draw: [], hand: [], discard: [], exhaust: [], removed: [], uids: [], offer: null, offers: [], lastMove: null, drivePlays: 0 };
 }
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'card';

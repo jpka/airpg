@@ -303,21 +303,22 @@ export class Engine {
     return card;
   }
 
-  /** Offer a draft (landmarks, major beats). It is resolved by the entity's next action. */
+  /** Offer a draft (landmarks, major beats). Each action resolves one offer; later ones wait their turn. */
   offerDraft(id, why) {
     const c = this.char(id);
     if (!c.deck || c.dissolved) return null;
     const cards = draftOffer(c, this.location(), this.scenario, this.rng, this.rules.deck.offerSize);
-    c.deck.offer = { why, cards };
-    this.emit('deck.offer', { why, cards: cards.map(pubCard) }, { actor: id });
-    return c.deck.offer;
+    const offer = { why, cards };
+    if (c.deck.offer) c.deck.offers.push(offer); else c.deck.offer = offer;
+    this.emit('deck.offer', { why, cards: cards.map(pubCard), queued: c.deck.offer !== offer }, { actor: id });
+    return offer;
   }
 
   resolveDraft(id, choice) {
     const c = this.char(id);
     const offer = c.deck?.offer;
     if (!offer) return null;
-    c.deck.offer = null;
+    c.deck.offer = c.deck.offers.shift() ?? null;
     const ref = String(choice ?? '').trim().toLowerCase();
     const pick = ref ? offer.cards.find((k) => k.offerId === ref || k.id.toLowerCase() === ref || k.name.toLowerCase() === ref) : null;
     if (ref && !pick && ref !== 'none' && ref !== 'null' && ref !== 'skip') this.flag('draft', `unknown draft choice "${choice}"; skipped`, id);
@@ -590,6 +591,7 @@ export class Engine {
         if (k.type === 'domain') { if (this.#domainRelevant(k.domain)) { pool++; parts.push(k.domain); } else parts.push(`${k.domain}:not here`); }
         else if (k.type === 'memory') { if (muted) parts.push(`memory:${k.memory}:muted`); else { pool += this.rules.memoryInvokeBonus; parts.push(`memory:${k.memory}`); } }
         else if (k.bonus) { pool += k.bonus; parts.push(k.type === 'drive' ? 'drive' : k.name); }
+        else if (k.ward) parts.push(`${k.name}:ward ${k.ward}`);
       }
       for (const k of d.held) if (action.skill && k.penalty?.includes(action.skill)) { pool--; parts.push(`-${k.name}`); }
     } else {
