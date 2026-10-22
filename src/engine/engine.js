@@ -1228,7 +1228,7 @@ export class Engine {
       edgesAllowed: this.edgesAllowed(id),
       drawPile: c.deck.draw.length, discardPile: c.deck.discard.length, exhausted: c.deck.exhaust.length, removed: c.deck.removed.length,
       cards: [...zone('hand'), ...zone('draw'), ...zone('discard')],
-      offer: c.deck.offer ? { why: c.deck.offer.why, cards: c.deck.offer.cards.map(pubCard) } : null,
+      offer: c.deck.offer ? { why: c.deck.offer.why, cards: c.deck.offer.cards.map(pubCard), queued: c.deck.offers.length } : null,
       lastMove: c.deck.lastMove,
       drivePlays: c.deck.drivePlays, driveRevealAt: this.rules.deck.driveRevealAt,
     };
@@ -1248,6 +1248,7 @@ export class Engine {
         backups: c.backups.map((m) => ({ id: m.id, text: m.experiences.join(' ') })),
         beats: c.beats.declared.map((bid) => ({ ...CALLINGS[c.calling].beats.find((b) => b.id === bid), hit: c.beats.hit.includes(bid) })),
         compels: c.compels,
+        restedThisScene: !!this.state.restedThisScene?.has(id),
         disposition: c.algotype.disposition, // hidden drive, phrased as disposition
         ...(c.deck ? { deck: this.deckView(id), flaw: c.flaw } : {}),
       },

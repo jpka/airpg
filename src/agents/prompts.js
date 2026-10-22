@@ -210,7 +210,7 @@ export function playerActPrompt(view) {
     view.theory ? `CANON THEORY: ${view.theory}` : '',
     `FACTS: ${j(view.facts)}`,
     `RECENT (as far back as your horizon lets you hold): ${j(view.recent)}`,
-    (view.location?.isDelve === false && view.location?.haunts?.length)
+    (view.location?.isDelve === false && view.location?.haunts?.length && !view.you.restedThisScene)
       ? `FREE THIS TURN (once per scene, does not use your action): "rest": {"haunt": id, "memory": memory id${deck ? ', "remove": card id or null' : ''}} — spend one memory at a haunt to clear stress and gain 1 Resolve${deck ? ', and you may remove one card (a condition, a gap, a dead card) from your deck' : ''}. Haunts here: ${j(view.location.haunts.map((h) => ({ id: h.id, name: h.name, clears: `${h.resistance} up to d${h.die}` })))}`
       : '',
     deck ? deckRules(view) : 'RULES YOU CAN USE: Resolve is spent automatically for +1 die on desperate rolls. Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
@@ -235,7 +235,7 @@ function deckRules(view) {
     (view.location?.isDelve === false && view.location?.haunts?.length && d.cards.some((k) => k.removable))
       ? `CARDS YOU COULD SET DOWN AT A HAUNT ("remove"): ${j(d.cards.filter((k) => k.removable).map((k) => ({ id: k.uid, name: k.name, type: k.type })))}`
       : '',
-    d.offer ? `REWARD (${d.offer.why}): choose ONE card to add to your deck, or null: ${j(d.offer.cards.map((k) => ({ id: k.offerId, name: k.name, kind: k.kind, text: k.text })))}` : '',
+    d.offer ? `REWARD (${d.offer.why}): choose ONE card to add to your deck, or null: ${j(d.offer.cards.map((k) => ({ id: k.offerId, name: k.name, kind: k.kind, text: k.text })))}${d.offer.queued ? ` (${d.offer.queued} more reward(s) wait for your next turns)` : ''}` : '',
     'OTHER RULES: Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
   ].filter(Boolean).join('\n');
 }

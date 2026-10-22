@@ -53,7 +53,7 @@ function mountAct(el, req, done) {
   const hand = d.hand;
   const firstRoll = req.targets.find((t) => ROLL_TARGETS.includes(t.target.split(':')[0]))?.target ?? 'none';
   const haunts = v.location?.haunts ?? [];
-  const landmark = v.location?.isDelve === false && haunts.length;
+  const landmark = v.location?.isDelve === false && haunts.length && !y.restedThisScene;
   const theorizable = !v.theory && v.clues.length >= 2;
   const removable = d.cards.filter((k) => k.removable);
   const s = {
@@ -73,7 +73,7 @@ function mountAct(el, req, done) {
   el.innerHTML = `${head(req, 'Your turn')}
     ${d.offer ? `<div class="offer"><div class="k">Reward · ${esc(d.offer.why)} — add one card to your deck</div>
       <div class="hand-grid">${d.offer.cards.map((k) => cardHtml(k, { attr: `data-offer="${esc(k.offerId)}"` })).join('')}</div>
-      <p class="note">Drafted cards are shuffled into your draw pile. Choose none to keep your deck lean.</p></div>` : ''}
+      <p class="note">Drafted cards are shuffled into your draw pile. Choose none to keep your deck lean.${d.offer.queued ? ` ${d.offer.queued} more reward${d.offer.queued > 1 ? 's wait' : ' waits'} for your next turn.` : ''}</p></div>` : ''}
     <div data-when="!theorize"><div class="k">Your hand · <span data-edges></span></div>
       <div class="hand-grid" data-hand></div>
       <p class="note" data-when="improvise">No Move card chosen: you improvise. <label class="inline">Skill <select data-f="skill">${opts(SKILLS.map((x) => [x, x]), s.skill)}</select></label> base die only.</p>
