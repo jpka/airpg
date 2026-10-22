@@ -234,6 +234,25 @@ test('a second draft offer waits behind the first instead of replacing it', () =
   assert.equal(e.events.filter((ev) => ev.type === 'deck.draft' && ev.actor === 'sort7').length, 2);
 });
 
+test('review fixes: edge order does not matter, a rest spends the named memory, preview never flags', () => {
+  const regentCast = ['regent', 'sort7', 'ilse2'].map((id) => ENTITIES[id]);
+  const pools = [];
+  for (const order of [['threshold', 'mem', 'flaw'], ['flaw', 'threshold', 'mem']]) {
+    const e = new Engine({ scenario: APERTURE, cast: regentCast, seed: 'r' }); e.start(); e.enterScene(1);
+    emptyHand(e, 'regent');
+    const ids = { knack: hold(e, 'regent', (k) => k.type === 'knack').uid, threshold: hold(e, 'regent', (k) => k.type === 'domain' && k.domain === 'Threshold').uid, mem: hold(e, 'regent', (k) => k.memory === 'm1').uid, flaw: hold(e, 'regent', (k) => k.type === 'flaw').uid };
+    const a = e.validateAction('regent', { target: 'delve', do: 'regrow the path', play: [ids.knack, ...order.map((o) => ids[o])], memory: { reinterpretation: 'Two heads, one road.' } });
+    pools.push(a.pool);
+    assert.ok(a.deck.edges.some((k) => k.type === 'flaw'));
+  }
+  assert.equal(pools[0], pools[1]);
+  const e = mk(); e.enterScene(2);
+  assert.equal(e.validateAction('ilse2', { target: 'haunt:warm-bed', rest: { haunt: 'warm-bed', memory: 'm3' } }).rest.memory, 'm3');
+  const n = e.events.length;
+  e.previewAction('sort7', { target: 'aperture', do: 'look' }); // outside SORT/7's cone
+  assert.equal(e.events.length, n);
+});
+
 test('v0.5: a search in a delve is refused before any card is spent', () => {
   const e = mk(); e.enterScene(1); // the Morphic Slope
   emptyHand(e, 'sort7');

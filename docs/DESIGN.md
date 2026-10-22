@@ -294,24 +294,24 @@ Seeds `measure-0…39` alternate between two casts: Choir + SORT/7 + Ilse-2, and
 |---|---|---|---|---|
 | Theory became canon | 35% | 68% | 55% | **83%** |
 | Sessions with a theory proposed | 35% | 70% | 55% | 85% |
-| Clues / session | 2.05 | 2.90 | 2.52 | 3.48 |
+| Clues / session | 2.05 | 2.90 | 2.55 | 3.50 |
 | … from entities | — | 0.88 | — | 0.95 |
-| Searches / session | 2.85 | 2.75 | 2.95 | 2.77 |
-| Clues accepted / theorize roll | 2.66 | 2.75 | 2.85 | 3.01 |
-| Ending: chosen | 8% | 20% | 5% | 8% |
+| Searches / session | 2.85 | 2.75 | 2.92 | 2.75 |
+| Clues accepted / theorize roll | 2.66 | 2.75 | 2.84 | 3.00 |
+| Ending: chosen | 8% | 20% | 3% | 5% |
 | Ending: closed | 20% | 13% | 5% | 5% |
-| Ending: overrun | 28% | 48% | 50% | 75% |
+| Ending: overrun | 28% | 48% | 53% | 78% |
 | Ending: unread | 45% | 20% | 40% | 13% |
 | Any-success | 51% | 51% | 50% | 51% |
-| Fallout per roll | 0.50 | 0.51 | 0.52 | 0.53 |
-| Fitness | 4.01 | 4.04 | 3.95 | 3.94 |
+| Fallout per roll | 0.50 | 0.51 | 0.52 | 0.54 |
+| Fitness | 4.01 | 4.04 | 3.94 | 3.93 |
 
-The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 50% to 74%, and to 82% with `cluesFromEntities: 2`. Clues per session go from 2.40 to 3.18 (3.76 with 2).
+The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 51% to 74%, and to 82% with `cluesFromEntities: 2`. Clues per session go from 2.42 to 3.21 (3.79 with 2).
 
 What this shows:
-- **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.95 → 2.77); and entities add about one clue per session.
-- **Scripted players overstate the canon rate.** They retry a failed theory in the finale until one lands (2.2 theorize rolls per session on v0.5), and their GM accepts 85% of claimed clues. Read the canon row as a ceiling for how often a theory can land, not a forecast for LLM tables.
-- **The theory now lands; answering the Aperture is the next gap.** The rule turns *unread* into *overrun* and *closed* into *chosen*: the party reads the pattern but does not answer it first. In 96% of overrun sessions the Ingression clock filled while the Aperture clock stood at about 1.6 of 6. Each wrong theory ticks Ingression by 2, so more theorizing also fills it faster. This was already the main loss before the rule (44% overrun over 400 seeds), and it is the next thing to tune: the Aperture's size, the finale's rounds, or a smaller Ingression tick for a wrong theory.
+- **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.92 → 2.75); and entities add about one clue per session.
+- **Scripted players overstate the canon rate.** They retry a failed theory in the finale until one lands (2.3 theorize rolls per session on v0.5), and their GM accepts 85% of claimed clues. Read the canon row as a ceiling for how often a theory can land, not a forecast for LLM tables.
+- **The theory now lands; answering the Aperture is the next gap.** The rule turns *unread* into *overrun* and *closed* into *chosen*: the party reads the pattern but does not answer it first. In 96% of overrun sessions the Ingression clock filled while the Aperture clock stood at about 1.6 of 6. Each wrong theory ticks Ingression by 2, so more theorizing also fills it faster. This was already the main loss before the rule (46% overrun over 400 seeds), and it is the next thing to tune: the Aperture's size, the finale's rounds, or a smaller Ingression tick for a wrong theory.
 
 ### Fifth light (LLM playtest on v0.5)
 

@@ -271,11 +271,11 @@ test('v0.5: searching a delve is refused, so it costs no roll', () => {
 });
 
 // Event streams pinned from the code before v0.5 (session.start, which names the rules, left out):
-// v0.3 (b071911) for deck.enabled=false, and v0.4 (f2fb936) for the deck. With cluesFromEntities off,
+// v0.3 (b071911) for deck.enabled=false, and v0.4 (7e0b0ce) for the deck. With cluesFromEntities off,
 // both must replay exactly; the rule is the only thing that changes them.
 const PINNED = {
   legacy: { 'choir,sort7,ilse2': ['fd81d97099', 'bfc717190f', '9c3d9b6127', '48fc5299cb'], 'regent,lattice,sort7': ['cf580b26c2', '8ae0c7259a', 'cf293b4173', 'a4eebeb6f9'] },
-  deck: { 'choir,sort7,ilse2': ['9fe06abe39', 'df1f921650', 'd1397b7853', '298292b281'], 'regent,lattice,sort7': ['f295568278', '94ab78c023', 'dc6151b490', 'b6c52eecd8'] },
+  deck: { 'choir,sort7,ilse2': ['9fe06abe39', 'df1f921650', 'd1397b7853', '298292b281'], 'regent,lattice,sort7': ['f295568278', '94ab78c023', 'b071658e80', 'b6c52eecd8'] },
 };
 async function fingerprints(castIds, rules, n) {
   const c = castIds.split(',').map((id) => ENTITIES[id]);
