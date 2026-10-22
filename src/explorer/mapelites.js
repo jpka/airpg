@@ -17,6 +17,7 @@ export const SPACE = {
   'stressDie.desperate': [6, 8, 10],
   'effectDie.standard': [4, 6, 8],
   'theorize.complexity': [2, 3, 4, 5, 6],
+  cluesFromEntities: [0, 1, 2],
   memoryInvokeBonus: [0, 1, 2],
   'roundsPerScene.delve': [1, 2, 3],
   'roundsPerScene.landmark': [1, 2],

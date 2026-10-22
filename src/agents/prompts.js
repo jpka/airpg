@@ -78,7 +78,8 @@ export function gmAdjudicatePrompt(view, action, actorSheet, extra = {}) {
     `ACTION (validated by engine): ${j({ say: action.say, do: action.do, target: action.target, skill: action.skill, domain: action.domain, kind: action.kind, needsRoll: action.needsRoll, pool: action.pool, difficulty: action.difficulty, memory: action.memory, theorize: action.theorize, ...(action.deck ? { cards_played: playedNames(action.deck) } : {}) })}`,
     action.deck?.edges.some((k) => k.type === 'drive') ? 'The actor played their DRIVE card: the act expresses a hidden inclination you cannot see. Let the narration notice the lean without naming it.' : '',
     action.deck?.edges.some((k) => k.type === 'flaw') ? `The actor turned their own flaw into strength (${action.deck.edges.find((k) => k.type === 'flaw').name}). Show the flaw in the act.` : '',
-    extra.clueSeeds?.length ? `IF SUCCESSFUL THIS REVEALS CLUE SEED(S): ${j(extra.clueSeeds)} — write "clue_text" as your vivid wording of the first seed (keep its meaning).` : '',
+    extra.clueSeeds?.length && extra.clueFrom ? `IF ${extra.clueFrom.toUpperCase()} IS MOVED (success or cost), IT GIVES UP CLUE SEED(S): ${j(extra.clueSeeds)} — write "clue_text" as what it reveals or lets slip, in its voice or through what it shows (keep the seed's meaning).`
+      : extra.clueSeeds?.length ? `IF SUCCESSFUL THIS REVEALS CLUE SEED(S): ${j(extra.clueSeeds)} — write "clue_text" as your vivid wording of the first seed (keep its meaning).` : '',
     extra.complicationHint ? `PENDING COMPLICATION to weave into the fail branch: ${extra.complicationHint}` : '',
   ];
   if (action.kind === 'theorize') {
@@ -175,7 +176,7 @@ export function targetMenu(view) {
   const targets = [{ target: 'none', what: 'just talk / flavour; changes nothing mechanically' }];
   if (view.scene?.kind === 'delve') targets.push({ target: 'delve', what: 'push through the journey (Navigate fits)' });
   if (view.location?.isDelve === false) targets.push({ target: 'clue', what: 'search/read this place for clues (Discern fits); clues are needed to theorize' });
-  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).` });
+  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).${n.givesClue ? ' Moving it also gives up one of this place\'s clues.' : ''}` });
   for (const c of view.clocks) if (c.kind !== 'delve') targets.push({ target: `clock:${c.id}`, what: `${c.name} ${c.value}/${c.size}${c.kind === 'progress' ? ' — fill it' : ' — push it back'}` });
   for (const a of view.allies) targets.push({ target: `ally:${a.id}`, what: `Mend ${a.name}` });
   for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress and gain 1 Resolve${view.you.deck ? '; you may also remove one card from your deck' : ''}` });

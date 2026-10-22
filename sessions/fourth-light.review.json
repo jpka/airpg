@@ -126,6 +126,10 @@
         "Ilse-2: Protect a memory at a cost."
       ]
     },
+    "clues": {
+      "found": 0,
+      "fromEntities": 0
+    },
     "memory": {
       "invocations": 10,
       "meanDrift": 0.576,

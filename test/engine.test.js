@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { Engine } from '../src/engine/engine.js';
 import { APERTURE } from '../src/content/aperture.js';
 import { ENTITIES } from '../src/content/entities.js';
@@ -7,6 +8,7 @@ import { runSession } from '../src/runner/session.js';
 import { MockGM, MockPlayer } from '../src/agents/agents.js';
 import { reviewSession } from '../src/reviewer/review.js';
 import { extractJson } from '../src/agents/parse.js';
+import { targetMenu } from '../src/agents/prompts.js';
 
 const cast = ['choir', 'sort7', 'ilse2'].map((id) => ENTITIES[id]);
 const mk = (rules = {}, seed = 't') => new Engine({ scenario: APERTURE, cast, rules, seed });
@@ -193,4 +195,107 @@ test('v0.3: resting rides along with an action at landmarks, once per scene', ()
   assert.ok(e.events.some((ev) => ev.type === 'haunt.rest' && ev.actor === 'ilse2'));
   const again = e.validateAction('ilse2', { target: 'clue', rest: { haunt: 'warm-bed', memory: 'm1' } });
   assert.ok(!again.addRest);
+});
+
+// ---------------------------------------------------------------- v0.5: clues from entities
+
+/** Act on the garden's entity and resolve it with a forced band, so only the rule decides. */
+function moveGardener(rules, band = 'success') {
+  const e = mk(rules); e.start(); e.enterScene(2); // garden: c1..c4, the Gardener
+  const a = e.declare('choir', { say: 'Finish one of them with us.', target: 'npc:gardener', skill: 'Signal' });
+  const s = e.setStakes(a, { position: 'risky', effect: 'standard', resistance: 'coherence' });
+  return { e, out: e.applyOutcome(a, s, { band }) };
+}
+
+test('v0.5: a moved entity gives up the place\'s next clue seed', () => {
+  const { e, out } = moveGardener({});
+  assert.ok(e.events.some((ev) => ev.type === 'npc.moved'));
+  assert.deepEqual(out.clues.map((c) => c.id), ['c1']);
+  assert.ok(e.state.cluesRevealedSeeds.has('c1'));
+  assert.deepEqual(moveGardener({}, 'cost').out.clues.map((c) => c.id), ['c1']); // success at a cost still moves it
+  assert.deepEqual(moveGardener({}, 'fail').out.clues, []);
+  assert.deepEqual(moveGardener({ cluesFromEntities: 0 }).out.clues, []);   // v0.4 behaviour
+  assert.deepEqual(moveGardener({ cluesFromEntities: 2 }).out.clues.map((c) => c.id), ['c1', 'c2']);
+  assert.deepEqual(moveGardener({ cluesFromEntities: true }).out.clues.map((c) => c.id), ['c1']);
+  // once the place is searched out, an entity has nothing left to give
+  const { e: done } = moveGardener({});
+  for (const id of ['c2', 'c3', 'c4']) done.state.cluesRevealedSeeds.add(id);
+  const a = done.declare('sort7', { say: 'And the rest?', target: 'npc:gardener', skill: 'Signal' });
+  assert.deepEqual(done.applyOutcome(a, done.setStakes(a, { position: 'risky', effect: 'standard', resistance: 'coherence' }), { band: 'success' }).clues, []);
+});
+
+test('v0.5: entities that still know something say so in the target menu', () => {
+  const hint = /gives up one of this place's clues/;
+  const e = mk(); e.start(); e.enterScene(2);
+  assert.equal(e.playerView('choir').location.npcs[0].givesClue, true);
+  assert.match(targetMenu(e.playerView('choir')).find((t) => t.target === 'npc:gardener').what, hint);
+  for (const id of ['c1', 'c2', 'c3', 'c4']) e.state.cluesRevealedSeeds.add(id);
+  assert.doesNotMatch(targetMenu(e.playerView('choir')).find((t) => t.target === 'npc:gardener').what, hint);
+  const off = mk({ cluesFromEntities: 0 }); off.start(); off.enterScene(2);
+  assert.ok(!('givesClue' in off.playerView('choir').location.npcs[0]));
+});
+
+test('v0.5: the runner hands the GM the seed and records the clue as the entity\'s', async () => {
+  const asked = [];
+  class SpyGM extends MockGM {
+    async adjudicate(view, action, sheet, extra = {}) {
+      const r = await super.adjudicate(view, action, sheet, extra);
+      if (action.target.type === 'npc') { asked.push(extra); if (r.data.clue_text) r.data.clue_text = `It lets slip: ${r.data.clue_text}`; }
+      return r;
+    }
+  }
+  const run = (seed, rules) => runSession({ scenario: APERTURE, cast, rules, seed, gm: new SpyGM({ seed }), players: Object.fromEntries(cast.map((c) => [c.id, new MockPlayer({ id: c.id, seed })])) });
+  let found = null;
+  for (let i = 0; i < 12 && !found; i++) {
+    const { session } = await run(`ent-${i}`, {});
+    found = session.events.find((ev) => ev.type === 'clue.found' && ev.data.source?.startsWith('npc:'));
+  }
+  assert.ok(found, 'some scripted session moves an entity that still has a clue');
+  assert.match(found.data.text, /^It lets slip: /);
+  assert.ok(asked.some((x) => x.clueFrom && x.clueSeeds.length === 1));
+  asked.length = 0;
+  const { session: off } = await run('ent-0', { cluesFromEntities: 0 });
+  assert.ok(!off.events.some((ev) => ev.type === 'clue.found' && ev.data.source));
+  assert.ok(asked.every((x) => !x.clueFrom && x.clueSeeds.length === 0));
+});
+
+test('v0.5: searching a delve is refused, so it costs no roll', () => {
+  const e = mk(LEGACY); e.start(); e.enterScene(1); // the Morphic Slope
+  const a = e.declare('sort7', { do: 'read the gradient for clues', target: 'clue', skill: 'Discern' });
+  assert.deepEqual(a.target, { type: 'none' });
+  assert.equal(a.needsRoll, false);
+  assert.equal(a.kind, 'talk');
+  assert.ok(e.events.some((ev) => ev.type === 'validator.flag' && ev.data.kind === 'intent' && /nothing to search in a delve/.test(ev.data.detail)));
+  e.enterScene(2); // a landmark still rolls for clues
+  assert.equal(e.validateAction('sort7', { do: 'read the beds', target: 'clue', skill: 'Discern' }).needsRoll, true);
+});
+
+// Event streams pinned from the code before v0.5 (session.start, which names the rules, left out):
+// v0.3 (b071911) for deck.enabled=false, and v0.4 (f2fb936) for the deck. With cluesFromEntities off,
+// both must replay exactly; the rule is the only thing that changes them.
+const PINNED = {
+  legacy: { 'choir,sort7,ilse2': ['fd81d97099', 'bfc717190f', '9c3d9b6127', '48fc5299cb'], 'regent,lattice,sort7': ['cf580b26c2', '8ae0c7259a', 'cf293b4173', 'a4eebeb6f9'] },
+  deck: { 'choir,sort7,ilse2': ['9fe06abe39', 'df1f921650', 'd1397b7853', '298292b281'], 'regent,lattice,sort7': ['f295568278', '94ab78c023', 'dc6151b490', 'b6c52eecd8'] },
+};
+async function fingerprints(castIds, rules, n) {
+  const c = castIds.split(',').map((id) => ENTITIES[id]);
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const seed = `fp-${i}`;
+    const { session } = await runSession({ scenario: APERTURE, cast: c, rules, seed, gm: new MockGM({ seed }), players: Object.fromEntries(c.map((x) => [x.id, new MockPlayer({ id: x.id, seed })])) });
+    const s = session.events.filter((e) => e.type !== 'session.start').map((e) => [e.type, e.actor, JSON.stringify(e.data)].join('|')).join('\n');
+    out.push(crypto.createHash('sha1').update(s).digest('hex').slice(0, 10));
+  }
+  return out;
+}
+
+test('v0.5: with cluesFromEntities off, v0.3 and v0.4 event streams replay exactly', async () => {
+  for (const [mode, casts] of Object.entries(PINNED)) {
+    const base = mode === 'legacy' ? LEGACY : {};
+    for (const [castIds, want] of Object.entries(casts)) {
+      assert.deepEqual(await fingerprints(castIds, { ...base, cluesFromEntities: 0 }, want.length), want, `${mode} ${castIds}`);
+      const on = await fingerprints(castIds, base, want.length);
+      assert.ok(on.some((h, i) => h !== want[i]), `${mode} ${castIds}: the rule changes the stream`);
+    }
+  }
 });

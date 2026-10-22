@@ -113,10 +113,13 @@ export async function runSession(o) {
     }
 
     if (action.needsRoll) {
-      const clueSeeds = action.target.type === 'clue'
-        ? (engine.location()?.clueSeeds ?? []).filter((s) => !engine.state.cluesRevealedSeeds.has(s.id)).slice(0, 2)
-        : [];
-      const adj = await call('gm', 'adjudicate', () => gm.adjudicate(gmv, action, sheet, { clueSeeds }));
+      // The seeds a success could reveal, so the GM can word the first one: a search may find two
+      // (a crit, Look Again); a moved entity gives up `cluesFromEntities` of them (v0.5).
+      const unrevealed = (engine.location()?.clueSeeds ?? []).filter((s) => !engine.state.cluesRevealedSeeds.has(s.id));
+      const fromEntity = action.target.type === 'npc' && engine.rules.cluesFromEntities ? Number(engine.rules.cluesFromEntities) : 0;
+      const clueSeeds = action.target.type === 'clue' ? unrevealed.slice(0, 2) : unrevealed.slice(0, fromEntity);
+      const clueFrom = fromEntity && clueSeeds.length ? o.scenario.npcs[action.target.id].name : null;
+      const adj = await call('gm', 'adjudicate', () => gm.adjudicate(gmv, action, sheet, { clueSeeds, ...(clueFrom ? { clueFrom } : {}) }));
       const stakes = engine.setStakes(action, adj);
       await pace();
       const roll = engine.roll(action, stakes);
@@ -134,7 +137,8 @@ export async function runSession(o) {
         actor: pid,
         backstage: { notTaken: Object.fromEntries(Object.entries(adj.branches ?? {}).filter(([k]) => k !== out.branch)), intent: adj.intent },
       });
-      out.clues.forEach((seed, i) => engine.addClue(seed, i === 0 ? adj.clue_text : seed.seed, pid));
+      const source = action.target.type === 'npc' ? `npc:${action.target.id}` : null;
+      out.clues.forEach((seed, i) => engine.addClue(seed, i === 0 ? adj.clue_text : seed.seed, pid, source));
       if (adj.npc_line && out.branch !== 'fail') engine.emit('dialogue', { speaker: action.target.type === 'npc' ? o.scenario.npcs[action.target.id].name : 'The Latent', text: adj.npc_line });
       if (!contradictions.length) engine.addFacts(adj.new_facts, 'gm');
       for (const b of adj.beats_hit ?? []) engine.hitBeat(b.actor ?? pid, b.beat, b.why);

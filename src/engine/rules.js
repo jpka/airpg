@@ -48,7 +48,7 @@ export const EFFECTS = ['limited', 'standard', 'great'];
 export const DIFFICULTIES = ['standard', 'risky', 'dangerous'];
 
 export const DEFAULT_RULES = {
-  id: 'latent-0.4',
+  id: 'latent-0.5',
   // Dice pool: 1 base + skill + domain + mastery(<=1) + memory + assists + resolve
   memoryInvokeBonus: 1,
   maxMastery: 1,
@@ -77,6 +77,9 @@ export const DEFAULT_RULES = {
   hauntsSpendExperience: true,
   // Theorize (Brindlewood): 2d6 + accepted clues - complexity
   theorize: { complexity: 4, trueAt: 7, greatAt: 10, failStressDie: 6, failIngressionTicks: 2 },
+  // v0.5 (fourth light's clue drought): an entity you move (npc.moved) also gives up this many of the
+  // place's unrevealed clues, as Brindlewood hands out a clue on any successful investigation. 0 = v0.4.
+  cluesFromEntities: 1,
   // Collective (Levin: stress sharing as cognitive glue)
   shareStress: true,                // guard: take half of an ally's stress until your next turn
   cohesionForSharedCone: 3,         // party sees the union of light cones at this cohesion

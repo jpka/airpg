@@ -233,3 +233,16 @@ test('a second draft offer waits behind the first instead of replacing it', () =
   assert.equal(e.char('sort7').deck.offer, null);
   assert.equal(e.events.filter((ev) => ev.type === 'deck.draft' && ev.actor === 'sort7').length, 2);
 });
+
+test('v0.5: a search in a delve is refused before any card is spent', () => {
+  const e = mk(); e.enterScene(1); // the Morphic Slope
+  emptyHand(e, 'sort7');
+  const discern = hold(e, 'sort7', (k) => k.kind === 'move' && k.skill === 'Discern');
+  const look = hold(e, 'sort7', (k) => k.name === 'Look Again');
+  const a = e.declare('sort7', { do: 'read the slope for clues', target: 'clue', play: [discern.uid, look.uid] });
+  assert.equal(a.needsRoll, false);
+  assert.equal(a.kind, 'talk');
+  assert.ok(e.char('sort7').deck.hand.includes(discern) && e.char('sort7').deck.hand.includes(look)); // nothing wasted
+  assert.ok(!e.events.some((ev) => ev.type === 'deck.play' && ev.actor === 'sort7'));
+  assert.ok(e.events.some((ev) => ev.type === 'validator.flag' && /nothing to search in a delve/.test(ev.data.detail)));
+});
