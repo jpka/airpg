@@ -17,6 +17,7 @@ node cli/play.js --seat ilse2              # play Ilse-2 yourself in the termina
 node cli/run.js --config config/agents.example.json --review   # LLM agents (needs ANTHROPIC_API_KEY)
 node cli/review.js sessions/<file>.json    # (re)review a session → .review.md / .review.json
 node cli/compare.js a.review.json b.review.json   # side-by-side metrics for A/B iteration
+node cli/measure.js --rules '{"cluesFromEntities":0}' --rules '{}'   # rule variants over 40 scripted seeds, side by side
 node cli/run.js --config <cfg> --rules config/rules/v0.3-candidate.json   # layer a rule variant
 node cli/explore.js --iterations 120       # MAP-Elites over rule variants → explorer/report.md
 node cli/serve.js                          # viewer at http://localhost:8787
@@ -69,7 +70,7 @@ src/reviewer/   review.js (metrics, findings, moments) · curves.js (tension/aff
 src/explorer/   mapelites.js (rule-space search, optional LLM mutation)
 viewer/         app.js (spectator UI) · seat.js (the human seat's card table) · sigils.js (procedural portraits, clocks, light-cone glyphs)
 index.html      the viewer page (also published as a claude.ai artifact)
-cli/            run · play (a human seat in the terminal) · review · explore · bridge · serve · compare
+cli/            run · play (a human seat in the terminal) · review · explore · bridge · serve · compare · measure
 docs/DESIGN.md  system + narrative design, and how each piece maps to its sources
 ```
 
