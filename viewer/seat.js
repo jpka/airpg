@@ -28,7 +28,7 @@ function head(req, title) {
   const d = y.deck;
   return `<div class="seat-head"><div class="sigil">${sigil(y.look, 40, y.id)}</div>
     <div style="min-width:0"><div class="k">${esc(title)}${req.view.scene ? ` · ${esc(req.view.scene.title)}` : ''}</div><h3>${esc(y.name)}</h3></div>
-    ${d ? `<span class="chip mono" title="hand size = 3 + Horizon">hand ${d.hand.length}/${d.handSize} · draw ${d.drawPile} · discard ${d.discardPile}</span>` : ''}</div>
+    ${d ? `<span class="chip mono" title="hand size grows with your Horizon">hand ${d.hand.length}/${d.handSize} · draw ${d.drawPile} · discard ${d.discardPile}</span>` : ''}</div>
     <div class="seat-status"><span class="stress">${bars}</span><span class="cone" title="Light cone: reach ${y.cone.reach}, horizon ${y.cone.horizon}">${coneGlyph(y.cone)} R${y.cone.reach} H${y.cone.horizon}</span>
     ${req.view.cohesion ? `<span class="pill">cohesion ${req.view.cohesion}</span>` : ''}${(y.conditions ?? []).map((c) => `<span class="pill bad">${esc(c)}</span>`).join('')}</div>
     <div class="catchup" hidden><span></span> <button type="button" class="btn" data-skip>Skip to now</button></div>`;
@@ -119,7 +119,7 @@ function mountAct(el, req, done) {
     el.querySelector('[data-edges]').textContent = `${hand.length} cards · Move: ${moveSel() ? moveSel().name : 'none'} · Edges ${edgesChosen}/${allowed}`;
     el.querySelector('[data-hand]').innerHTML = hand.map((k) => {
       const on = s.play.has(k.uid);
-      const full = !on && k.kind === 'edge' && edgesChosen >= allowed && k.type !== 'memory';
+      const full = !on && k.kind === 'edge' && edgesChosen >= allowed && k.type !== 'memory' && !(k.focus < 0); // a slot-costing flaw frees its own slot
       return cardHtml(k, { pressed: on, disabled: !k.playable || full, warn: on && pd.dropped?.includes(k.uid), attr: `data-card="${esc(k.uid)}"` });
     }).join('');
     const when = {

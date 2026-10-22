@@ -394,6 +394,8 @@ export class Engine {
       valid.push(k);
     }
     const allowedFor = (kept) => this.edgesAllowed(c.id, c.deck.hand.filter((k) => !kept.includes(k)));
+    // A played flaw that costs a slot while held frees that slot, so it is kept first (listing order must not matter).
+    valid.sort((a, b) => ((a.focus ?? 0) < 0 ? 0 : 1) - ((b.focus ?? 0) < 0 ? 0 : 1));
     let kept = valid;
     if (roll) for (let pass = 0; pass < 2; pass++) { const n = allowedFor(kept); if (kept.length > n) kept = kept.slice(0, n); }
     for (const k of valid) if (!kept.includes(k)) {
@@ -469,7 +471,7 @@ export class Engine {
     // Rest at a haunt: spend an experience to clear stress
     if (out.kind !== 'theorize' && out.target.type === 'haunt') {
       out.kind = 'rest';
-      const memId = intent.memory?.id ?? c.memories[0]?.id;
+      const memId = intent.memory?.id ?? intent.rest?.memory ?? intent.rest?.memory_id ?? c.memories[0]?.id;
       out.rest = { haunt: out.target.id, memory: c.memories.find((m) => m.id === memId) ? memId : c.memories[0]?.id ?? null };
       if (!out.rest.memory) issues.push('no memory left to spend at a haunt');
       if (c.deck) this.#restRemoval(c, intent.rest?.remove ?? intent.remove, out.rest, picked, issues);
@@ -549,7 +551,7 @@ export class Engine {
       return { type: 'delve', id: this.state.delveClockId };
     }
     if (t === 'clue' || t === 'clues') return { type: 'clue' };
-    if (t === 'aperture') return this.parseTarget('clock:aperture', actorId, issues);
+    if (t === 'aperture') return this.parseTarget('clock:aperture', actorId, issues, { dry });
     const [kind, id] = t.split(':');
     if (kind === 'clock') {
       const clock = this.state.clocks[id];
