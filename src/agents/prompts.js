@@ -189,6 +189,10 @@ export function handForPrompt(deck) {
     if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; }
     if (k.type === 'drive') o.inclination = k.disposition;
     if (k.type === 'domain') o.here = k.here ? 'yes: +1 die here' : 'no: +0 here';
+    // Conditions as fields, not prose: fourth light's misplays were all conditional cards.
+    if (k.onlyTargets) o.only_if_target = k.onlyTargets.join(' or ');
+    if (k.edgeFor) o.only_with_move = k.edgeFor.join(' or ');
+    if (k.kind === 'compel') o.discard_only_with_move = deck.lastMove ?? 'none yet: keep it, it costs 1 Coherence';
     return o;
   });
 }

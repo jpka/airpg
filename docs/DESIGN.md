@@ -232,11 +232,45 @@ Difficulty barely moved, which was the intent: the deck changes *which* options 
 
 **Prompt check.** Before the playtest, eight act prompts captured at varied deck states were answered by a Haiku agent. All eight validated with zero engine issues. Its two confusions went back into the prompt: a Move gets its die on any target, and the cards you could set down at a haunt are now listed by id.
 
+### Fourth light (LLM playtest on the deck)
+
+Same cast, models and harness as third light: a Sonnet GM and three Haiku players on the file bridge, 73 calls. Third light ran v0.2, so this comparison spans both v0.3's fixes and the deck. No LLM session was played on v0.3 alone.
+
+| | third (v0.2) | fourth (v0.4 deck) |
+|---|---|---|
+| Any-success | 50% | 67% |
+| Fallouts (major) | 19 (2) | 9 (2) |
+| Beats hit | 2/6 | 4/6 |
+| Guards / stress shared | 19 / 16 | 7 / 2 |
+| Memory invocations | 25 | 10 |
+| Rests at haunts | 0 | 1 (and one card set down) |
+| Improvised rolls | — | 8% |
+| Edges per roll | — | 1.38 |
+| Drafts taken | — | 8 of 8 |
+| Flaws played / Drive cards played | — | 5 / 8 |
+| Hidden drives surfaced | 1 of 3 | 3 of 3 (Ilse-2's revealed by her third Drive) |
+| Dead choices | haunts | none |
+| Engine intent flags | 0 | 4 |
+| Ending | unread | closed |
+| Fitness | 3.55 | 4.38 |
+
+What the deck did:
+- **Players used it as intended.** They read it: knack before plain Moves, domains only where they help, flaws played with the Moves that turn them into strengths (*Too Many Mouths* with Signal, *Not the Original* with Evade and Conceal), Drives when the act leaned their way.
+- **Stress stopped multiplying.** Fallout fell back to a healthy 38% of rolls. Most of that is v0.3's single fallout check for a shared hit, which the scripted measurement above already showed. The deck adds to it: a Guard needs a Guard card, so guarding became deliberate (7 guards, down from 19).
+- **The hidden drives showed.** All three surfaced, and the Drive card made the reviewer's evidence direct rather than inferred from keywords.
+
+What it exposed:
+- **Conditional cards were misplayed.** All four intent flags were cards played outside their condition: Look Again on a delve (twice), Chorus on a delve, Looping with the wrong Move. The engine dropped them correctly, but the prompt now states each card's condition as a field (`only_if_target`, `only_with_move`, `discard_only_with_move`) instead of prose.
+- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search landmarks rarely: 2 of 6 landmark actions, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it.
+
+**Seat discipline again.** Two of the three Haiku seats each made one stray call to a messaging tool despite a two-command allowlist written into their instructions. One failed on a missing argument and the other was denied by the permission layer; neither had any effect. This is the third playtest with this pattern. Seat agents need a tool allowlist enforced by the harness, not only by their prompt.
+
 ## 11. Known limits and next steps
 
 - Bridge seats keep their own conversation history, so a player agent may remember further back than its Horizon allows. API-driven seats are stateless per call and do respect it.
 - The forked-voice fallout (*Split*) now adds a Second Voice card, but it still does not spawn a second agent instance. The design calls for one, with divergence tracked in the ledger.
 - The deck's numbers (hand base 3, two Edges, two copies per skill, offer size 3) were tuned on scripted agents only. The explorer now searches `deck.handBase` and `deck.edgesPerTurn`. Fitness has no deck-specific term yet; an improvised-share or clogged-hand penalty is a natural next step.
+- The clue drought above (§10, fourth light) is the next rules change to make and A/B.
 - A person at the table plays at human speed. The browser seat waits indefinitely, while the file bridge times out after 30 minutes.
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
