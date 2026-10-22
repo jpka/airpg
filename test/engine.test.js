@@ -10,6 +10,8 @@ import { extractJson } from '../src/agents/parse.js';
 
 const cast = ['choir', 'sort7', 'ilse2'].map((id) => ENTITIES[id]);
 const mk = (rules = {}, seed = 't') => new Engine({ scenario: APERTURE, cast, rules, seed });
+// v0.3's free-form intent grammar (no deck); still a supported rule variant. Deck tests: test/deck.test.js
+const LEGACY = { deck: { enabled: false } };
 
 async function mockRun(seed, rules = {}) {
   const players = Object.fromEntries(cast.map((c) => [c.id, new MockPlayer({ id: c.id, seed })]));
@@ -26,7 +28,7 @@ test('sessions are deterministic for a seed', async () => {
 });
 
 test('engine decides whether a roll is needed, not the agent', () => {
-  const e = mk(); e.start(); e.enterScene(1); // delve
+  const e = mk(LEGACY); e.start(); e.enterScene(1); // delve
   const talk = e.validateAction('choir', { say: 'We could just walk.', target: 'none' });
   assert.equal(talk.needsRoll, false);
   const delve = e.validateAction('choir', { do: 'push on', target: 'delve', skill: 'Navigate', domain: 'Flesh' });
@@ -105,7 +107,7 @@ test('theorize: only clues found AND accepted count; truth becomes canon', () =>
 });
 
 test('memory invocation requires reinterpretation and records drift', () => {
-  const e = mk(); e.start(); e.enterScene(1);
+  const e = mk(LEGACY); e.start(); e.enterScene(1);
   const bad = e.validateAction('ilse2', { target: 'delve', do: 'go', memory: { id: 'm1' } });
   assert.equal(bad.memory, null);
   const ok = e.declare('ilse2', { target: 'delve', do: 'go', memory: { id: 'm1', reinterpretation: 'It was never her kitchen. It was mine.' } });
@@ -131,7 +133,7 @@ test('extractJson tolerates fences, chatter and trailing commas', () => {
 });
 
 test('guard: guardian takes half of the ally\'s stress until the guardian\'s next turn', () => {
-  const e = mk(); e.start(); e.enterScene(1);
+  const e = mk(LEGACY); e.start(); e.enterScene(1);
   e.declare('choir', { say: 'We hold you.', target: 'none', guard: 'ilse2' });
   e.inflict('ilse2', 'boundary', 6);
   assert.ok(e.events.some((ev) => ev.type === 'stress.share' && ev.actor === 'choir'));
@@ -151,7 +153,7 @@ test('desperate drops one more die and raises effect', () => {
 });
 
 test('resting at a haunt spends an experience and grants Resolve', () => {
-  const e = mk(); e.start(); e.enterScene(2); // garden
+  const e = mk(LEGACY); e.start(); e.enterScene(2); // garden
   e.char('ilse2').stress.substrate = 5;
   const a = e.declare('ilse2', { target: 'haunt:warm-bed', memory: { id: 'm2' } });
   const r = e.rest(a);
@@ -166,11 +168,11 @@ test('player prompt shows what moves each entity', async () => {
 });
 
 test('v0.3: a shared hit makes one fallout check, not two', () => {
-  const e = mk(); e.start(); e.enterScene(1);
+  const e = mk(LEGACY); e.start(); e.enterScene(1);
   e.declare('choir', { say: 'Lean on us.', target: 'none', guard: 'sort7' });
   e.inflict('sort7', 'boundary', 8);
   assert.equal(e.events.filter((ev) => ev.type === 'fallout.check').length, 1);
-  const legacy = mk({ sharedHitSingleFalloutCheck: false }); legacy.start(); legacy.enterScene(1);
+  const legacy = mk({ ...LEGACY, sharedHitSingleFalloutCheck: false }); legacy.start(); legacy.enterScene(1);
   legacy.declare('choir', { say: 'Lean on us.', target: 'none', guard: 'sort7' });
   legacy.inflict('sort7', 'boundary', 8);
   assert.equal(legacy.events.filter((ev) => ev.type === 'fallout.check').length, 2);

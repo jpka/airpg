@@ -222,6 +222,9 @@ export class MockValidator {
   async check() { return { data: { contradictions: [] }, meta: { ok: true, ms: 0, mock: true } }; }
 }
 
+const isStatusLike = (k) => ['condition', 'compel', 'gap', 'voice'].includes(k.type);
+const MOVE_FITS = { delve: ['Navigate', 'Evade', 'Endure'], clue: ['Discern'], npc: ['Signal', 'Discern'], clock: ['Signal', 'Reshape', 'Discern'], ally: ['Mend', 'Endure'] };
+
 export class MockPlayer {
   constructor({ id, seed = 'mock', boldness = 0.5, cooperation = 0.4 } = {}) {
     this.id = id; this.rng = createRng(`${seed}:${id}`); this.boldness = boldness; this.cooperation = cooperation; this.kind = 'mock';
@@ -232,6 +235,69 @@ export class MockPlayer {
     return ok({ text: `${view.you.pitch} ${this.#say()}`, beats, intent: 'Find out what I am for.' });
   }
   async act(view) {
+    const res = await this.#act(view);
+    if (view.you.deck) res.data = this.#cards(view, res.data);
+    return res;
+  }
+
+  /** Deck mode: turn the scripted intent into cards from the hand (plus drafts and haunt removals). */
+  #cards(view, intent) {
+    const r = this.rng;
+    const deck = view.you.deck;
+    const hand = deck.hand;
+    const out = { ...intent, play: [] };
+    if (deck.offer) {
+      const calling = deck.offer.cards.find((k) => k.type === 'calling');
+      out.draft = (calling && r.next() < 0.5 ? calling : r.pick(deck.offer.cards)).offerId;
+    }
+    const t = String(intent.target ?? 'none').split(':')[0];
+    const setDown = deck.cards.find((k) => k.removable && isStatusLike(k));
+    if (setDown && out.rest) out.rest = { ...out.rest, remove: setDown.uid };
+    if (setDown && t === 'haunt') out.remove = setDown.uid;
+    if (out.guard && !hand.some((k) => k.kind === 'guard')) out.guard = null;
+    if (out.guard) out.play.push(hand.find((k) => k.kind === 'guard').uid);
+    const rolls = t !== 'none' && t !== 'haunt' && !intent.theorize;
+    if (!rolls) {
+      if (out.memory && !hand.some((k) => k.type === 'memory' && k.memory === out.memory.id)) out.memory = null;
+      return out;
+    }
+    // Best Move in hand for this target: the intended skill, else any skill that fits (an entity's own levers first).
+    const npc = t === 'npc' ? view.location?.npcs?.find((n) => `npc:${n.id}` === intent.target) : null;
+    const fits = [intent.skill, ...(npc?.movedBy ?? []), ...(MOVE_FITS[t] ?? [])];
+    let move = null;
+    for (const s of fits) { move = hand.find((k) => k.type === 'knack' && k.skill === s) ?? hand.find((k) => k.kind === 'move' && k.skill === s); if (move) break; }
+    move ??= hand.find((k) => k.type === 'knack') ?? hand.find((k) => k.kind === 'move'); // any approach beats improvising
+    if (move) { out.play.push(move.uid); out.skill = move.skill; }
+    const edges = [];
+    if (out.memory) {
+      const mc = hand.find((k) => k.type === 'memory' && k.memory === out.memory.id)
+        ?? hand.find((k) => k.type === 'memory' && !k.invokedThisScene);
+      if (mc) { edges.push(mc); out.memory = mc.memory === out.memory.id ? out.memory : { id: mc.memory, reinterpretation: (VOICE[this.id]?.remember ?? ((x) => x))(mc.memoryText) }; }
+      else out.memory = null;
+    }
+    const dom = hand.find((k) => k.type === 'domain' && k.here);
+    if (dom) edges.push(dom);
+    out.domain = dom?.domain ?? null;
+    const flaw = hand.find((k) => k.type === 'flaw' && k.edgeFor?.includes(out.skill));
+    if (flaw) edges.push(flaw);
+    const oneUse = hand.find((k) => ['resolve', 'gift', 'insight'].includes(k.type));
+    if (oneUse && (view.location?.tier ?? 1) >= 2) edges.push(oneUse);
+    const calling = hand.find((k) => k.type === 'calling' && (!k.onlyTargets || k.onlyTargets.includes(t)));
+    if (calling && r.next() < 0.7) edges.push(calling);
+    const drive = hand.find((k) => k.type === 'drive');
+    if (drive && r.next() < 0.6) edges.push(drive);
+    const voice = hand.find((k) => k.type === 'voice');
+    if (voice && r.next() < 0.4) edges.push(voice);
+    // Playing a flaw that costs focus frees the slot it was costing.
+    const kept = edges.slice(0, deck.edgesAllowed - (flaw?.focus ?? 0));
+    if (out.memory && !kept.some((k) => k.type === 'memory')) out.memory = null;
+    out.play.push(...kept.map((k) => k.uid));
+    const compel = hand.find((k) => k.kind === 'compel');
+    if (compel && deck.lastMove === out.skill) out.play.push(compel.uid);
+    return out;
+  }
+
+  async #act(view) {
     const r = this.rng;
     const you = view.you;
     const kind = view.scene?.kind;
@@ -244,9 +310,11 @@ export class MockPlayer {
     const memory = mem ? { id: mem.id, reinterpretation: (VOICE[this.id]?.remember ?? ((t) => t))(mem.text) } : null;
     const hurtAlly = view.allies.filter((a) => a.total >= 5).sort((a, b) => b.total - a.total)[0];
     const share = r.next() < this.cooperation ? view.allies[0]?.id ?? null : null;
-    // Free rest at landmarks when hurt (v0.3), never spending the memory being invoked
+    // Free rest at landmarks when hurt (v0.3), never spending the memory being invoked.
+    // With a deck, a haunt is also where you set down a status card, so clogged hands rest too.
     const spare = you.memories.filter((m) => m.id !== mem?.id);
-    const rest = view.location?.isDelve === false && view.location?.haunts?.length && you.total >= 4 && spare.length > 1
+    const clogged = !!you.deck?.cards.some(isStatusLike) && spare.length > 2;
+    const rest = view.location?.isDelve === false && view.location?.haunts?.length && (you.total >= 4 || clogged) && spare.length > 1
       ? { haunt: r.pick(view.location.haunts).id, memory: spare.at(-1).id } : null;
     const base = { intent: '', say: this.#say(), memory, beat: openBeat, guard: share, theorize: null, rest };
     const skillFor = (pref) => pref.find((s) => you.skills.includes(s)) ?? pref[0];

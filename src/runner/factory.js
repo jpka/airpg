@@ -1,6 +1,7 @@
 // Build agents from a JSON config (shared by CLI and browser viewer).
 import { providerFromConfig } from '../agents/llm.js';
 import { LLMGM, LLMPlayer, LLMValidator, MockGM, MockPlayer, MockValidator } from '../agents/agents.js';
+import { HumanPlayer } from '../agents/human.js';
 import { ENTITIES } from '../content/entities.js';
 import { APERTURE } from '../content/aperture.js';
 import { Engine } from '../engine/engine.js';
@@ -14,8 +15,9 @@ export function buildRun(config, env = {}, extras = {}) {
   const cast = castIds.map((id) => { const e = ENTITIES[id]; if (!e) throw new Error(`unknown entity ${id}`); return e; });
   const seed = config.seed ?? `latent-${Date.now()}`;
   const providers = {};
+  const isHuman = (name) => name === 'human' || config.providers?.[name]?.type === 'human';
   const prov = (name, seat) => {
-    if (!name || name === 'mock') return null;
+    if (!name || name === 'mock' || isHuman(name)) return null;
     const key = `${name}:${seat ?? ''}`;
     const pc = config.providers?.[name];
     if (!pc) throw new Error(`unknown provider "${name}"`);
@@ -38,6 +40,12 @@ export function buildRun(config, env = {}, extras = {}) {
     const p = prov(pc.provider, ent.id);
     const c = probe.char(ent.id);
     const sheet = { id: c.id, name: c.name, pitch: c.pitch, pronoun: c.pronoun, voice: c.voice, disposition: c.algotype.disposition };
+    if (isHuman(pc.provider)) {
+      // extras.humanUI: one adapter for every human seat, or { <entity id>: adapter }
+      const ui = extras.humanUI?.[ent.id] ?? extras.humanUI;
+      players[ent.id] = new HumanPlayer({ id: ent.id, ui, sheet });
+      continue;
+    }
     players[ent.id] = p
       ? new LLMPlayer({ provider: p, model: pc.model, tier: pc.tier, temperature: pc.temperature ?? 1.0, persona: pc.persona ?? '', sheet, mockFallback: new MockPlayer({ id: ent.id, seed: `${seed}-fb` }) })
       : new MockPlayer({ id: ent.id, seed, boldness: pc.boldness ?? 0.5, cooperation: pc.cooperation ?? 0.4 });

@@ -29,6 +29,7 @@ export async function runSession(o) {
   let aborted = false;
 
   if (hooks.onEvent) engine.on(hooks.onEvent);
+  for (const p of Object.values(players)) p.bindEngine?.(engine); // human seats preview their hand against the live engine
   const pace = async () => { if (hooks.pace) await hooks.pace(engine.events.at(-1)); };
 
   const fallbackGM = new MockGM({ seed: `${o.seed}-gm-budget` });
@@ -38,11 +39,11 @@ export async function runSession(o) {
     if (calls >= budget.maxCalls) {
       // Out of budget: finish the session with scripted agents and say so.
       if (gm.kind !== 'mock') { gm = fallbackGM; engine.flag('budget', `call budget ${budget.maxCalls} reached; GM switched to scripted`); }
-      for (const id of Object.keys(players)) if (players[id].kind !== 'mock') { players[id] = fallbackPlayers[id]; }
+      for (const id of Object.keys(players)) if (players[id].kind === 'llm') { players[id] = fallbackPlayers[id]; } // humans keep their seat
     }
     const res = await fn();
-    if (!res.meta?.mock && !res.meta?.skipped) calls++;
-    engine.emit('agent.call', { agent: agentId, tag, ms: res.meta?.ms ?? 0, ok: !!res.meta?.ok, fallback: !!res.meta?.fallback, mock: !!res.meta?.mock, error: res.meta?.error ?? null, attempts: res.meta?.attempts ?? 1 }, { actor: agentId === 'gm' ? null : agentId });
+    if (!res.meta?.mock && !res.meta?.skipped && !res.meta?.human) calls++;
+    engine.emit('agent.call', { agent: agentId, tag, ms: res.meta?.ms ?? 0, ok: !!res.meta?.ok, fallback: !!res.meta?.fallback, mock: !!res.meta?.mock, ...(res.meta?.human ? { human: true } : {}), error: res.meta?.error ?? null, attempts: res.meta?.attempts ?? 1 }, { actor: agentId === 'gm' ? null : agentId });
     if (res.meta?.fallback) engine.flag('agent', `${agentId}.${tag} fell back to scripted (${res.meta.error})`, agentId === 'gm' ? null : agentId);
     return res.data ?? {};
   }
@@ -74,9 +75,16 @@ export async function runSession(o) {
     }
   }
 
-  async function turn(pid, round, { mustTheorize = false } = {}) {
+  async function turn(pid, round, opts) {
     engine.clearGuardsBy(pid);
     engine.emit('turn.start', { round }, { actor: pid });
+    engine.drawHand(pid);
+    await act(pid, opts);
+    // End of turn: unplayed cards are discarded; a compel still held costs stress.
+    if (engine.endTurn(pid)) await handleFallouts(engine.pendingFallouts.splice(0));
+  }
+
+  async function act(pid, { mustTheorize = false } = {}) {
     const view = engine.playerView(pid);
     if (mustTheorize) view.recent.push('THE APERTURE WILL NOT OPEN TO THE UNREAD: theorize now if you can.');
     const intent = await call(pid, 'act', () => players[pid].act(view));

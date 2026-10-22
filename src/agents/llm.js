@@ -112,6 +112,8 @@ export function providerFromConfig(cfg, env = {}, extras = {}) {
       return bridgeProvider({ dir: cfg.dir, seat: cfg.seat ?? extras.seat });
     case 'mock':
       return null; // handled by MockAgent
+    case 'human':
+      return null; // a seat, not a model: see agents/human.js
     default:
       throw new Error(`unknown provider type ${cfg.type}`);
   }

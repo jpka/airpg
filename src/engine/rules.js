@@ -48,7 +48,7 @@ export const EFFECTS = ['limited', 'standard', 'great'];
 export const DIFFICULTIES = ['standard', 'risky', 'dangerous'];
 
 export const DEFAULT_RULES = {
-  id: 'latent-0.1',
+  id: 'latent-0.4',
   // Dice pool: 1 base + skill + domain + mastery(<=1) + memory + assists + resolve
   memoryInvokeBonus: 1,
   maxMastery: 1,
@@ -90,6 +90,22 @@ export const DEFAULT_RULES = {
   // v0.3: shared stress makes ONE fallout check (the more-stressed sharer), so sharing smooths rather than multiplies fallout
   sharedHitSingleFalloutCheck: true,
   cohesionDecayPerScene: 1,
+  // v0.4: the deck. Every trait, flaw and condition is a card; a turn is one Move card plus Edges.
+  // Set deck.enabled=false for the v0.3 free-form intent grammar (old sessions, A/B runs).
+  deck: {
+    enabled: true,
+    handBase: 3,                    // hand size = handBase + Horizon: the temporal light cone is how many options you can hold
+    handMin: 2,
+    handMax: 7,
+    edgesPerTurn: 2,                // Edge cards per action (domains, memories, drive, resolve…); flaws can lower it
+    copiesPerSkill: 2,
+    restRemoves: 1,                 // a haunt is a campfire: resting may also remove one card from your deck
+    driveRevealAt: 3,               // the third time you play your Drive card, everyone sees what you are drawn to
+    draftAtLandmarks: true,         // entering a landmark offers each entity a card
+    draftOnMajorBeat: true,
+    offerSize: 3,
+    regretStress: 1,                // a compel still held at the end of your turn costs this much stress
+  },
   // Light cone
   horizonEventWindow: 6,            // events of history an agent sees per point of Horizon
   // Content scaling (lets the Explorer tune pacing without editing scenarios)
