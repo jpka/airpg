@@ -315,14 +315,35 @@ What this shows:
 
 ### Fifth light (LLM playtest on v0.5)
 
-Pending: the bridge playtest on v0.5 is being re-run.
+Same cast, models and harness as fourth light: a Sonnet GM and three Haiku players on the file bridge, 56 calls, no fallbacks. `node cli/compare.js sessions/fourth-light.review.json sessions/fifth-light.review.json`:
+
+| | fourth (v0.4) | fifth (v0.5) |
+|---|---|---|
+| Clues found (from entities) | 0 (0) | 8 (3) |
+| Searches at landmarks and the finale | 2 of 10 actions | 3 of 12 |
+| Acts on entities | 4 | 4 |
+| Theory | false (0 clues, 2d6=7, total 3) | false with 3 accepted at the Library, then **great** with 4 at the Aperture (2d6=10, total 10) |
+| Ending | closed | overrun |
+| Any-success | 67% | 72% |
+| Fallouts (major) | 9 (2) | 2 (1) |
+| Beats hit | 4/6 | 2/6 |
+| Engine intent flags | 4 | 0 |
+| Fitness | 4.38 | 3.74 |
+
+What it shows:
+- **The drought is over.** Play looked much like fourth light: players searched about as rarely (3 of 12) and acted on entities as often (4). But every entity they moved gave something up: the Gardener, the Prime and the Pattern each yielded a clue, worded in the entity's voice ("I finished one, once. It woke with two heads, and wept for the one it had been."). With the searches, the party had 7 clues by the Library and 8 at the finale. The theory had a real chance: one miss at 3 accepted clues, then a *great* result.
+- **No wasted delve searches**, and no intent flags at all. The card-condition fields from fourth light also held.
+- **The ending shows the next gap, exactly as the scripted runs predicted.** The Ingression clock ticked once per scene (5), once on a failed roll, and by 2 for the wrong theory at the Library. It completed as the finale opened. The Aperture clock never moved, so the party read the pattern but could not answer it: *overrun*.
+- **Fitness fell, for reasons this rule does not touch.** Fallout was low (2 in 18 rolls, against a 28% target), beats were 2/6, and the Choir hit none. This is one session, and the GM was more lenient with stress than fourth light's. Read it alongside the 40-seed numbers, where fitness is flat.
+
+**Seat discipline.** One Haiku seat again made one stray call to a messaging tool (an empty `send_message`, which failed and changed nothing), despite a two-command allowlist in its instructions. That makes four playtests in a row with this pattern.
 
 ## 12. Known limits and next steps
 
 - Bridge seats keep their own conversation history, so a player agent may remember further back than its Horizon allows. API-driven seats are stateless per call and do respect it.
 - The forked-voice fallout (*Split*) now adds a Second Voice card, but it still does not spawn a second agent instance. The design calls for one, with divergence tracked in the ledger.
 - The deck's numbers (hand base 3, two Edges, two copies per skill, offer size 3) were tuned on scripted agents only. The explorer now searches `deck.handBase` and `deck.edgesPerTurn`. Fitness has no deck-specific term yet; an improvised-share or clogged-hand penalty is a natural next step.
-- The clue drought (§10, fourth light) is addressed by v0.5 (§11). The finale's next gap is the race between answering the Aperture and the Ingression clock: in scripted play, most theories that land still end *overrun*.
+- The clue drought (§10, fourth light) is addressed by v0.5 (§11). The finale's next gap is the race between answering the Aperture and the Ingression clock. In scripted play, most theories that land still end *overrun*. Fifth light's Ingression filled as the finale opened, before anyone could act on the Aperture. Candidates: a smaller Ingression tick for a wrong theory, no per-scene tick in the finale, or an Aperture that starts partly filled when a theory is canon.
 - A person at the table plays at human speed. The browser seat waits indefinitely, while the file bridge times out after 30 minutes.
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
