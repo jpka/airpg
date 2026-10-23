@@ -210,9 +210,14 @@ test('describeEvent covers narration and state-change events', () => {
   assert.equal(d('stress.heal', { target: 'sort7', resistance: 'boundary', amount: 4, total: 4 }, 'ilse2'), 'Ilse-2 mends SORT/7: 4 boundary stress cleared (total 4)');
 });
 
-test('judge transcript keeps the ending of a long session', async () => {
-  const { session } = await mockRun('judge');
-  const lines = transcript(session, 100).split('\n');
-  assert.ok(lines.length <= 101);
-  assert.ok(lines.some((l) => l.startsWith('Ending:')));
+test('judge transcript keeps the opening and the ending, within the line budget', () => {
+  const session = { events: Array.from({ length: 300 }, (_, i) => ({ type: 'outcome', data: { text: `line ${i}` } })) };
+  const lines = transcript(session).split('\n');
+  assert.equal(lines.length, 220);
+  assert.equal(lines[0], 'GM: line 0');
+  assert.equal(lines[178], 'GM: line 178');
+  assert.equal(lines[179], '… (81 lines omitted) …');
+  assert.equal(lines[219], 'GM: line 299');
+  for (const max of [0, 1, 10, 30, 79]) assert.ok(transcript(session, max).split('\n').length <= Math.max(1, max), `maxLines ${max}`);
+  assert.equal(transcript({ events: session.events.slice(0, 220) }).split('\n').length, 220); // at the budget, nothing is cut
 });

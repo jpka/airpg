@@ -21,7 +21,8 @@ export function transcript(session, maxLines = 220, tailLines = 40) {
   const lines = session.events.map((e) => describeEvent(e, names)).filter(Boolean);
   // Long sessions keep the opening and the ending; the cut falls in the middle.
   if (lines.length <= maxLines) return lines.join('\n');
-  return [...lines.slice(0, maxLines - tailLines), `… (${lines.length - maxLines} lines omitted) …`, ...lines.slice(-tailLines)].join('\n');
+  const tail = Math.min(tailLines, Math.floor(maxLines / 2)), head = Math.max(0, maxLines - tail - 1); // the marker takes one line
+  return [...lines.slice(0, head), `… (${lines.length - head - tail} lines omitted) …`, ...(tail ? lines.slice(-tail) : [])].join('\n');
 }
 
 export async function judgeSession(session, provider, { model = null, tier = 'default' } = {}) {
