@@ -265,7 +265,8 @@ export class Engine {
     const { drawn, reshuffled } = drawUpTo(c.deck, size, this.rng);
     // The audience demanded a memory: make sure one is in hand.
     if (this.state.forceMemory && !c.deck.hand.some((k) => k.type === 'memory')) {
-      const m = [...c.deck.draw, ...c.deck.discard].find((k) => k.type === 'memory');
+      const fresh = (k) => k.type === 'memory' && c.memories.find((m) => m.id === k.memory)?.invokedInScene !== this.state.scene?.id;
+      const m = [...c.deck.draw, ...c.deck.discard].find(fresh);
       if (m) { const k = moveCard(c.deck, m.uid, 'hand'); drawn.push(k); }
     }
     this.emit('deck.draw', {
@@ -345,7 +346,8 @@ export class Engine {
     if (choice === undefined) this.flag('draft', `offer from ${offer.why} left unanswered; it passes`, id);
     const card = pick ? addCard(c.deck, { ...pick, source: `draft: ${offer.why}` }, 'draw', this.rng) : null;
     if (card) this.#syncSheet(c, card);
-    this.emit('deck.draft', { card: pubCard(card), answer: card ? 'taken' : choice === undefined ? 'unanswered' : 'declined', why: offer.why, offered: offer.cards.map((k) => k.name) }, { actor: id });
+    const invalid = ref && !pick && !['none', 'null', 'skip'].includes(ref);
+    this.emit('deck.draft', { card: pubCard(card), answer: card ? 'taken' : choice === undefined ? 'unanswered' : invalid ? 'invalid' : 'declined', why: offer.why, offered: offer.cards.map((k) => k.name) }, { actor: id });
     return card;
   }
 
@@ -385,6 +387,7 @@ export class Engine {
   #applyCards(c, out, picked, issues) {
     const roll = out.needsRoll && out.kind === 'act';
     const d = { move: null, edges: [], guard: null, compel: null, improvised: false, dropped: [], ward: 0, extraClue: 0, allowed: 0, held: [] };
+    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk (target ${out.target.type})` : null);
     const drop = (k, why) => { if (!d.dropped.includes(k.uid)) d.dropped.push(k.uid); if (why) issues.push(why); };
     const moves = picked.filter((k) => k.kind === 'move');
     if (roll) {
@@ -392,7 +395,7 @@ export class Engine {
       d.improvised = !d.move;
       for (const k of moves.slice(1)) drop(k, `only one Move per action; ${k.name} stays in hand`);
       if (d.move) { out.skill = d.move.skill; if (d.move.domain) out.domain ??= d.move.domain; }
-    } else for (const k of moves) drop(k);
+    } else for (const k of moves) drop(k, noRoll(k));
     for (const k of picked.filter((x) => x.kind === 'status')) drop(k, `${k.name} is unplayable`);
     const guards = picked.filter((k) => k.kind === 'guard');
     if (out.guard && guards.length) d.guard = guards[0];
@@ -415,7 +418,7 @@ export class Engine {
         else drop(k, out.memory || spentThisScene ? (spentThisScene && !issues.some((i) => i.includes('already invoked')) ? `${k.name} was already invoked this scene` : null) : `${k.name} needs a retelling ("memory": {"reinterpretation": …})`);
         continue;
       }
-      if (!roll) { drop(k); continue; }
+      if (!roll) { drop(k, noRoll(k)); continue; }
       if (k.edgeFor?.length && !k.edgeFor.includes(out.skill)) { drop(k, `${k.name} plays only with ${k.edgeFor.join(' or ')}`); continue; }
       if (k.onlyTargets && !k.onlyTargets.includes(out.target.type)) { drop(k, `${k.name} helps only when the target is ${k.onlyTargets.join(' or ')}`); continue; }
       valid.push(k);
@@ -424,7 +427,8 @@ export class Engine {
     const setDown = out.addRest?.remove ?? null;
     const allowedFor = (kept) => this.edgesAllowed(c.id, c.deck.hand.filter((k) => !kept.includes(k) && k.uid !== setDown));
     // A played flaw that costs a slot while held frees that slot, so it is kept first (listing order must not matter).
-    valid.sort((a, b) => ((a.focus ?? 0) < 0 ? 0 : 1) - ((b.focus ?? 0) < 0 ? 0 : 1));
+    const lifts = (k) => (k.focus ?? 0) < 0 || (k.mutesMemory && valid.some((x) => x.type === 'memory'));
+    valid.sort((a, b) => (lifts(a) ? 0 : 1) - (lifts(b) ? 0 : 1));
     let kept = valid;
     if (roll) for (let pass = 0; pass < 2; pass++) { const n = allowedFor(kept); if (kept.length > n) kept = kept.slice(0, n); }
     for (const k of valid) if (!kept.includes(k)) {

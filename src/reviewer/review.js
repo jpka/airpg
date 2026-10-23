@@ -342,7 +342,7 @@ function deckStats(ev, humanSeats) {
       regretHeld: regret.reduce((s, e) => s + e.data.regret.length, 0),
       regretStress: of('stress').filter((e) => /^compel/.test(e.data.source ?? '')).reduce((s, e) => s + e.data.taken, 0),
       // skipped = every offer not taken; unanswered = left out of the reply (pre-answer-field sessions count as declined)
-      drafts: { offered: of('deck.offer').length, picked: picked.length, skipped: drafts.length - picked.length, unanswered: drafts.filter((e) => e.data.answer === 'unanswered').length, picks: picked.map((e) => e.data.card.name) },
+      drafts: { offered: of('deck.offer').length, picked: picked.length, skipped: drafts.length - picked.length, unanswered: drafts.filter((e) => e.data.answer === 'unanswered' || e.data.answer === 'invalid').length, picks: picked.map((e) => e.data.card.name) },
       removals,
       gainsByType: tally(gains.map((e) => e.data.card)),
       drivePlays, revealsViaDrive: of('algotype.reveal').filter((e) => e.data.via === 'drive').length,

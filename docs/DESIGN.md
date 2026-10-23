@@ -199,11 +199,11 @@ The request was a human seat with a deckbuilder interface, where a character's a
 ### The turn, and the shape of a session
 
 - **Draw.** At the start of a turn, draw up to **hand size = 3 + Horizon**. This is the Levin mapping: the temporal light cone is how many options a mind can hold at once. SORT/7 (Horizon 3) holds six cards and the Choir holds four. *Narrowing* shrinks the hand; a major beat grows it. Reach still decides what you can see and target.
-- **Play.** One Move (or improvise: any skill, base die only), up to `edgesPerTurn` (2) Edges, plus free Guard and Compel cards. Held flaws and conditions apply their penalties. The engine resolves cards tolerantly: by id or name, and the legacy fields `skill`, `domain`, `memory` and `guard` pull the matching card from the hand. Every invalid play is corrected and flagged, as before.
+- **Play.** One Move (or improvise: any skill, base die only), up to `edgesPerTurn` (2) Edges, plus free Guard and Compel cards. Held flaws and conditions apply their penalties. The engine resolves cards tolerantly: by id or name, and the legacy fields `skill`, `domain`, `memory` and `guard` pull the matching card from the hand. Every invalid play is corrected and flagged, as before, including cards played on an action that rolls nothing.
 - **Discard.** Unplayed cards go to the discard pile and the deck reshuffles when the draw pile runs out (Slay the Spire's rhythm). Stakes, dice, fallout and clocks are unchanged.
 - **The map.** Heart's campaign shape already reads like a deckbuilder run. Delves are the fights. Landmarks are where minds pick things up: entering one offers each entity a **draft** (one of its calling, one of the place's domain, one skill the place's entity is moved by), and so does a major beat. Haunts are **campfires**: the free rest also lets you **set down one card** (not your flaw, drive or memories). That gives haunts a use that is not only about stress, and they had been the most persistently dead mechanic since first light.
 
-`deck.enabled: false` keeps the v0.3 grammar. In that mode the engine reproduces v0.3's event streams exactly: 24 of 24 scripted sessions hash-identical. Use it for old sessions and A/B runs. Since v0.5, also set `cluesFromEntities: 0`; the tests pin both v0.3's and v0.4's streams.
+`deck.enabled: false` keeps the v0.3 grammar. In that mode the engine reproduces v0.3's event streams exactly: 24 of 24 scripted sessions match event for event, apart from the rules header in `session.start`. Use it for old sessions and A/B runs. Since v0.5, also set `cluesFromEntities: 0`; the tests pin both v0.3's and v0.4's streams.
 
 ### A seat for a person
 
@@ -228,7 +228,7 @@ The request was a human seat with a deckbuilder interface, where a character's a
 | Cards set down at haunts / session | — | 0.65 |
 | Fitness (reviewer composite) | 3.86 | 3.93 |
 
-Difficulty barely moved, which was the intent: the deck changes *which* options are available, not how hard the dice are. Memories and guards became rarer and more deliberate. Theories land more often, because Look Again and Insight feed the clue ledger. The reviewer gained deck metrics, findings (hand fit, clogged hands, drafts, haunt removals, unused cards) and three deck-only choices (drafting, playing your Drive, playing your flaw). Legacy reviews are byte-identical.
+Difficulty barely moved, which was the intent: the deck changes *which* options are available, not how hard the dice are. Memories and guards became rarer and more deliberate. Theories land more often, because Look Again and Insight feed the clue ledger, though by how much depends on the seeds: +20 points on these seeds, +5 on an independent reviewer's 40. Treat it as a direction, not a size. The reviewer gained deck metrics, findings (hand fit, clogged hands, drafts, haunt removals, unused cards) and three deck-only choices (drafting, playing your Drive, playing your flaw). Legacy reviews are unchanged: the same fitness, findings and markdown, with one added `metrics.deck: null` field in the JSON.
 
 **Prompt check.** Before the playtest, eight act prompts captured at varied deck states were answered by a Haiku agent. All eight validated with zero engine issues. Its two confusions went back into the prompt: a Move gets its die on any target, and the cards you could set down at a haunt are now listed by id.
 
@@ -261,7 +261,7 @@ What the deck did:
 
 What it exposed:
 - **Conditional cards were misplayed.** All four intent flags were cards played outside their condition: Look Again on a delve (twice), Chorus on a delve, Looping with the wrong Move. The engine dropped them correctly, but the prompt now states each card's condition as a field (`only_if_target`, `only_with_move`, `discard_only_with_move`) instead of prose.
-- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search landmarks rarely: 2 of 6 landmark actions, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it. Both are done in v0.5 (§11).
+- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search rarely: 1 of 6 actions at the two landmarks, plus 1 in the finale, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it. Both are done in v0.5 (§11).
 
 **Seat discipline again.** Two of the three Haiku seats each made one stray call to a messaging tool despite a two-command allowlist written into their instructions. One failed on a missing argument and the other was denied by the permission layer; neither had any effect. This is the third playtest with this pattern. Seat agents need a tool allowlist enforced by the harness, not only by their prompt.
 
@@ -284,7 +284,8 @@ An independent review of the deck raised a set of open design calls. Each was we
 - **Fallout can lend a domain you already have.** *Bleed-through* and *Ingressed* add a lent Threshold card even to the Regent, who has Threshold. In v0.3 a domain was a set member, so a second Threshold gave nothing but the Ingression tick. In a deck, copies stack: more Threshold means drawing the Latent's help more often, which is exactly the gift-with-a-price the fallout describes.
 - ***Unanchored* removes every card of the lost domain**, lent and innate alike. Losing a domain means losing it, and the sheet and deck stay in agreement.
 - **SORT/7 and Looping.** SORT/7's Coherence protection (1) absorbs Looping's end-of-turn cost (1), so the compel only clogs its hand. That is still a cost: it takes a hand slot. v0.3 compels had no mechanical cost at all, and a process that holds together shrugging off a loop is in character. Worth revisiting if compels multiply.
-- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off (and, since v0.5, `cluesFromEntities: 0`) it still matches v0.3 exactly (24 of 24 scripted sessions).
+- **An edge cut by the limit cannot free a memory for the free rest.** The rest is validated before the edge limit trims the play, so if a memory card is cut, a free rest that would spend that same memory has already been refused. It is rare (it needs a full edge budget plus a rest on the invoked memory), the engine flags it, and fixing it would need two validation passes. Not worth the complexity yet.
+- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off (and, since v0.5, `cluesFromEntities: 0`) it still matches v0.3 exactly (24 of 24 scripted sessions, apart from the rules header).
 
 ## 11. v0.5: clues from entities
 
@@ -327,7 +328,7 @@ Seeds `measure-0…39` alternate between two casts: Choir + SORT/7 + Ilse-2, and
 | Fallout per roll | 0.50 | 0.51 | 0.51 | 0.53 |
 | Fitness | 4.01 | 4.04 | 3.97 | 3.97 |
 
-The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 51% to 73%, and to 83% with `cluesFromEntities: 2`. Clues per session go from 2.43 to 3.21 (3.79 with 2).
+The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 50% to 73%, and to 82% with `cluesFromEntities: 2`. Clues per session go from 2.43 to 3.21 (3.80 with 2).
 
 What this shows:
 - **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.95 → 2.75); and entities add about one clue per session.

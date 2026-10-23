@@ -280,6 +280,23 @@ test('design calls: a set-down card is gone before the dice, the sheet follows t
   assert.equal(e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'choir').data.answer, 'declined');
 });
 
+test('review round 2: muting flaw kept first, no-roll card plays are flagged, invalid drafts are not declines', () => {
+  const pools = [];
+  for (const order of [['mem', 'drive', 'flaw'], ['flaw', 'mem', 'drive']]) {
+    const e = mk(); e.enterScene(2);
+    emptyHand(e, 'ilse2');
+    const ids = { evade: hold(e, 'ilse2', (k) => k.skill === 'Evade').uid, mem: hold(e, 'ilse2', (k) => k.memory === 'm3').uid, drive: hold(e, 'ilse2', (k) => k.type === 'drive').uid, flaw: hold(e, 'ilse2', (k) => k.type === 'flaw').uid };
+    pools.push(e.validateAction('ilse2', { target: 'clue', do: 'slip in', play: [ids.evade, ...order.map((o) => ids[o])], memory: { reinterpretation: 'A message in a backup, answered at last.' } }).pool);
+  }
+  assert.equal(pools[0], pools[1]);
+  const e = mk(); e.enterScene(2);
+  e.drawHand('choir');
+  const talk = e.validateAction('choir', { say: 'We listen.', target: 'none', play: e.char('choir').deck.hand.filter((k) => k.kind === 'move').map((k) => k.uid) });
+  assert.ok(talk.issues.some((i) => /nothing is rolled/.test(i)));
+  e.declare('sort7', { say: 'Index 1.', target: 'none', draft: '1' });
+  assert.equal(e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'sort7').data.answer, 'invalid');
+});
+
 test('v0.5: a search in a delve is refused before any card is spent', () => {
   const e = mk(); e.enterScene(1); // the Morphic Slope
   emptyHand(e, 'sort7');
