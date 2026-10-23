@@ -290,8 +290,21 @@ export class Engine {
     const c = this.char(id);
     if (!c.deck) return null;
     const card = addCard(c.deck, { ...def, source: def.source ?? why }, zone, this.rng);
+    this.#syncSheet(c, card);
     this.emit('deck.gain', { card: pubCard(card), why, zone }, { actor: id });
     return card;
+  }
+
+  /** Deck mode: the sheet summarises the deck. A skill or domain joins the sheet with its first card and leaves with its last. */
+  #syncSheet(c, card) {
+    const entry = (k) => (k.kind === 'move' ? ['skills', k.skill] : k.type === 'domain' ? ['domains', k.domain] : null);
+    const e = entry(card);
+    if (!e) return;
+    const [field, value] = e;
+    const present = cardsInPlay(c.deck).some((k) => entry(k)?.[0] === field && entry(k)[1] === value);
+    const i = c[field].indexOf(value);
+    if (present && i < 0) c[field].push(value);
+    if (!present && i >= 0) c[field].splice(i, 1);
   }
 
   removeCard(id, uid, why) {
@@ -301,6 +314,7 @@ export class Engine {
     // A removed condition or compel is healed, not just hidden.
     if (card.type === 'condition') { const i = c.conditions.findIndex((x) => x.name === card.name); if (i >= 0) c.conditions.splice(i, 1); }
     if (card.type === 'compel') { const i = c.compels.indexOf(card.compel); if (i >= 0) c.compels.splice(i, 1); }
+    this.#syncSheet(c, card);
     this.emit('deck.remove', { card: pubCard(card), why }, { actor: id });
     return card;
   }
@@ -316,6 +330,10 @@ export class Engine {
     return offer;
   }
 
+  /**
+   * Your next action answers the offer on the table: a card, or null to walk on. Leaving `draft` out
+   * also walks on (offers never pile up), but it is flagged and logged as unanswered, not as a choice.
+   */
   resolveDraft(id, choice) {
     const c = this.char(id);
     const offer = c.deck?.offer;
@@ -324,8 +342,10 @@ export class Engine {
     const ref = String(choice ?? '').trim().toLowerCase();
     const pick = ref ? offer.cards.find((k) => k.offerId === ref || k.id.toLowerCase() === ref || k.name.toLowerCase() === ref) : null;
     if (ref && !pick && ref !== 'none' && ref !== 'null' && ref !== 'skip') this.flag('draft', `unknown draft choice "${choice}"; skipped`, id);
+    if (choice === undefined) this.flag('draft', `offer from ${offer.why} left unanswered; it passes`, id);
     const card = pick ? addCard(c.deck, { ...pick, source: `draft: ${offer.why}` }, 'draw', this.rng) : null;
-    this.emit('deck.draft', { card: pubCard(card), why: offer.why, offered: offer.cards.map((k) => k.name) }, { actor: id });
+    if (card) this.#syncSheet(c, card);
+    this.emit('deck.draft', { card: pubCard(card), answer: card ? 'taken' : choice === undefined ? 'unanswered' : 'declined', why: offer.why, offered: offer.cards.map((k) => k.name) }, { actor: id });
     return card;
   }
 
@@ -389,13 +409,20 @@ export class Engine {
     // Edges: each must fit this action; then the slot limit (held flaws can cost a slot).
     const valid = [];
     for (const k of picked.filter((x) => x.kind === 'edge')) {
-      if (k.type === 'memory') { if (out.memory?.id === k.memory) valid.push(k); else drop(k, out.memory ? null : `${k.name} needs a retelling ("memory": {"reinterpretation": …})`); continue; }
+      if (k.type === 'memory') {
+        const spentThisScene = c.memories.find((m) => m.id === k.memory)?.invokedInScene === this.state.scene?.id;
+        if (out.memory?.id === k.memory) valid.push(k);
+        else drop(k, out.memory || spentThisScene ? (spentThisScene && !issues.some((i) => i.includes('already invoked')) ? `${k.name} was already invoked this scene` : null) : `${k.name} needs a retelling ("memory": {"reinterpretation": …})`);
+        continue;
+      }
       if (!roll) { drop(k); continue; }
       if (k.edgeFor?.length && !k.edgeFor.includes(out.skill)) { drop(k, `${k.name} plays only with ${k.edgeFor.join(' or ')}`); continue; }
       if (k.onlyTargets && !k.onlyTargets.includes(out.target.type)) { drop(k, `${k.name} helps only when the target is ${k.onlyTargets.join(' or ')}`); continue; }
       valid.push(k);
     }
-    const allowedFor = (kept) => this.edgesAllowed(c.id, c.deck.hand.filter((k) => !kept.includes(k)));
+    // A card set down at this action's free rest is gone before the dice: it is not held for this roll.
+    const setDown = out.addRest?.remove ?? null;
+    const allowedFor = (kept) => this.edgesAllowed(c.id, c.deck.hand.filter((k) => !kept.includes(k) && k.uid !== setDown));
     // A played flaw that costs a slot while held frees that slot, so it is kept first (listing order must not matter).
     valid.sort((a, b) => ((a.focus ?? 0) < 0 ? 0 : 1) - ((b.focus ?? 0) < 0 ? 0 : 1));
     let kept = valid;
@@ -409,7 +436,7 @@ export class Engine {
     d.ward = kept.reduce((s, k) => s + (k.ward ?? 0), 0);
     d.extraClue = kept.reduce((s, k) => s + (k.extraClue ?? 0), 0);
     const used = [d.move, ...d.edges, d.guard, d.compel].filter(Boolean);
-    d.held = c.deck.hand.filter((k) => !used.includes(k));
+    d.held = c.deck.hand.filter((k) => !used.includes(k) && k.uid !== setDown);
     out.deck = d;
   }
 

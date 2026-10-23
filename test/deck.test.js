@@ -253,6 +253,33 @@ test('review fixes: edge order does not matter, a rest spends the named memory, 
   assert.equal(e.events.length, n);
 });
 
+test('design calls: a set-down card is gone before the dice, the sheet follows the deck, unanswered drafts are logged', () => {
+  const e = mk(); e.enterScene(2); // garden: haunts, a draft on the table for everyone
+  e.applyFallout({ actor: 'choir', severity: 'minor', resistance: 'substrate' }, 'leaking'); // −1 on Endure, Reshape
+  emptyHand(e, 'choir');
+  const leak = hold(e, 'choir', (k) => k.name === 'Leaking');
+  const endure = hold(e, 'choir', (k) => k.skill === 'Endure');
+  const keep = e.validateAction('choir', { target: 'clue', do: 'hold the bed still', play: [endure.uid] });
+  const drop = e.validateAction('choir', { target: 'clue', do: 'hold the bed still', play: [endure.uid], rest: { haunt: 'warm-bed', memory: 'm3', remove: leak.uid } });
+  assert.ok(keep.poolParts.includes('-Leaking') && !drop.poolParts.includes('-Leaking'));
+  assert.equal(drop.pool, keep.pool + 1);
+  // Draft a skill the sheet lacks: it joins the sheet; set down its only card: it leaves again.
+  const offer = e.char('sort7').deck.offer;
+  const skillCard = offer.cards.find((k) => k.kind === 'move' && !e.char('sort7').skills.includes(k.skill));
+  assert.ok(skillCard, 'the Garden offers SORT/7 a skill it lacks (the Gardener is moved by Reshape and Mend)');
+  e.declare('sort7', { say: 'Noted.', target: 'none', draft: skillCard.offerId });
+  assert.ok(e.char('sort7').skills.includes(skillCard.skill));
+  const k = cardsInPlay(e.char('sort7').deck).find((x) => x.skill === skillCard.skill);
+  e.removeCard('sort7', k.uid, 'set down at test');
+  assert.ok(!e.char('sort7').skills.includes(skillCard.skill));
+  e.declare('ilse2', { say: 'Not now.', target: 'none' }); // no "draft" key at all
+  const ev = e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'ilse2');
+  assert.equal(ev.data.answer, 'unanswered');
+  assert.ok(e.events.some((x) => x.type === 'validator.flag' && x.data.kind === 'draft' && x.actor === 'ilse2'));
+  e.declare('choir', { say: 'No thank you.', target: 'none', draft: null });
+  assert.equal(e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'choir').data.answer, 'declined');
+});
+
 test('v0.5: a search in a delve is refused before any card is spent', () => {
   const e = mk(); e.enterScene(1); // the Morphic Slope
   emptyHand(e, 'sort7');

@@ -215,18 +215,18 @@ The request was a human seat with a deckbuilder interface, where a character's a
 
 | | v0.3 rules (`deck.enabled: false`) | v0.4 deck |
 |---|---|---|
-| Mean dice pool | 2.98 | 3.12 |
-| Any-success | 49% | 50% |
-| Fallout per roll | 0.54 | 0.49 |
-| Major fallouts / session | 2.83 | 2.40 |
+| Mean dice pool | 2.98 | 3.13 |
+| Any-success | 49% | 51% |
+| Fallout per roll | 0.54 | 0.48 |
+| Major fallouts / session | 2.83 | 2.48 |
 | Theory became canon | 35% | 55% |
-| Memory invocations / session | 8.2 | 4.7 |
+| Memory invocations / session | 8.2 | 4.8 |
 | Guards / session | 9.4 | 2.9 |
 | Improvised (no Move in hand) | — | 11% |
 | Edges per roll | — | 1.06 |
 | Drafts taken / session | — | 7.9 |
-| Cards set down at haunts / session | — | 0.6 |
-| Fitness (reviewer composite) | 3.86 | 3.94 |
+| Cards set down at haunts / session | — | 0.65 |
+| Fitness (reviewer composite) | 3.86 | 3.93 |
 
 Difficulty barely moved, which was the intent: the deck changes *which* options are available, not how hard the dice are. Memories and guards became rarer and more deliberate. Theories land more often, because Look Again and Insight feed the clue ledger. The reviewer gained deck metrics, findings (hand fit, clogged hands, drafts, haunt removals, unused cards) and three deck-only choices (drafting, playing your Drive, playing your flaw). Legacy reviews are byte-identical.
 
@@ -264,6 +264,27 @@ What it exposed:
 - **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search landmarks rarely: 2 of 6 landmark actions, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it. Both are done in v0.5 (§11).
 
 **Seat discipline again.** Two of the three Haiku seats each made one stray call to a messaging tool despite a two-command allowlist written into their instructions. One failed on a missing argument and the other was denied by the permission layer; neither had any effect. This is the third playtest with this pattern. Seat agents need a tool allowlist enforced by the harness, not only by their prompt.
+
+### Design calls, reviewed
+
+An independent review of the deck raised a set of open design calls. Each was weighed against the deck's purpose (one interface for every seat, legible play, surfaced choices, consequences that stay), with data where data could decide.
+
+**Changed**
+
+- **A card set down at a haunt is gone before the dice.** It used to be removed during the action but still counted as held, so a Leaking card set down at the free rest still cost −1 on that roll. The free rest already clears stress before the roll; setting a card down is part of the same rest, so it now takes effect at the same moment. "Set it down" means what a player expects, and the preview shows the extra die.
+- **The sheet follows the deck.** Drafted skills and domains never reached the sheet, so the GM and the LLM players were shown a sheet that disagreed with the hand, and *Unanchored* could never take a drafted domain. In deck mode, a skill or domain now joins the sheet with its first card and leaves with its last. *Unanchored* ("you lose the thread of your own purpose") removes the last domain on the sheet, which is now the most recently acquired one: the shallowest root goes first.
+- **Unanswered offers are recorded as unanswered.** See *Kept* for the rule itself. What changed is the record: leaving `draft` out of a reply is flagged and logged as `answer: "unanswered"`, separately from an explicit `null` (`declined`). The reviewer reports the two apart, because "agents decline drafts" is a design signal and "agents ignore the offer" is a prompt bug.
+- **The prompt states the exceptions.** It now says that playing a slot-costing flaw (Two Heads) gives its slot back, that a memory is muted while Ilse-2 holds her flaw, and that a memory card already used this scene cannot be invoked again (that message used to say "needs a retelling", which was misleading). Hand size is no longer written as "3 + Horizon" where a rule variant could make it wrong.
+- **Compel stress is measured as paid.** The reviewer used to count compels held at the end of a turn as "regret stress". It now reports compels held and the stress actually paid separately (see *SORT/7 and Looping* below for why they differ).
+
+**Kept**
+
+- **A knack gives +2 dice wherever it is played.** v0.3 nominally required the knack's domain for the mastery die, but it only checked that the agent *named* the domain, never that the place had it. Any agent that named its domain got mastery. Requiring presence would count the place twice, since domain cards already pay only where the place has them. It would also erase most of what makes a knack a knack: over 40 scripted seeds a played knack's domain was present only 36% of the time (48 of 135 plays). Lattice Ghost's Ruin appears nowhere in the Aperture, so its knack would never fire. The maximum is unchanged: a knack plus its domain card where present equals v0.3's skill + domain + mastery.
+- **Your next action answers the offer.** A card, or `null` to walk on; leaving it out also walks on. An offer that waited for an answer would pile up behind the queue and re-prompt every turn. The engine never picks for you, because declining is a real deckbuilding choice: a lean deck draws its best cards more often. In practice every seat answers. Fourth light took 8 of 8 offers, and the scripted, browser and terminal seats always send an explicit answer.
+- **Fallout can lend a domain you already have.** *Bleed-through* and *Ingressed* add a lent Threshold card even to the Regent, who has Threshold. In v0.3 a domain was a set member, so a second Threshold gave nothing but the Ingression tick. In a deck, copies stack: more Threshold means drawing the Latent's help more often, which is exactly the gift-with-a-price the fallout describes.
+- ***Unanchored* removes every card of the lost domain**, lent and innate alike. Losing a domain means losing it, and the sheet and deck stay in agreement.
+- **SORT/7 and Looping.** SORT/7's Coherence protection (1) absorbs Looping's end-of-turn cost (1), so the compel only clogs its hand. That is still a cost: it takes a hand slot. v0.3 compels had no mechanical cost at all, and a process that holds together shrugging off a loop is in character. Worth revisiting if compels multiply.
+- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off (and, since v0.5, `cluesFromEntities: 0`) it still matches v0.3 exactly (24 of 24 scripted sessions).
 
 ## 11. v0.5: clues from entities
 

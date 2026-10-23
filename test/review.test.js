@@ -71,8 +71,9 @@ test('deck metrics count what the events say', () => {
   assert.deepEqual(d.playedByType, { skill: 3, domain: 1, drive: 3, flaw: 1 });
   assert.deepEqual(d.hands, { n: 4, cards: 19, status: 3 });
   assert.equal(d.statusShareOfHand, 0.158);
-  assert.equal(d.regretStress, 1);
-  assert.deepEqual(d.drafts, { offered: 2, picked: 1, skipped: 1, picks: ['Chorus'] });
+  assert.equal(d.regretHeld, 1);
+  assert.equal(d.regretStress, 0); // no compel stress events in this hand-built session
+  assert.deepEqual(d.drafts, { offered: 2, picked: 1, skipped: 1, unanswered: 0, picks: ['Chorus'] });
   assert.deepEqual(d.removals, { haunt: 1, spent: 1, erased: 0, other: 0 });
   assert.deepEqual(d.gainsByType, { condition: 1, resolve: 1 });
   assert.deepEqual(d.drivePlays, { a: 3, b: 0 });
@@ -169,7 +170,8 @@ test('a real deck session reviews to a populated, self-consistent deck block', a
   assert.equal(sum(d.playedByType), played);
   assert.equal(d.hands.n, of('deck.draw').length);
   assert.ok(d.statusShareOfHand >= 0 && d.statusShareOfHand <= 1);
-  assert.equal(d.regretStress, of('deck.discard').reduce((n, e) => n + e.data.regret.length, 0));
+  assert.equal(d.regretHeld, of('deck.discard').reduce((n, e) => n + e.data.regret.length, 0));
+  assert.equal(d.regretStress, of('stress').filter((e) => /^compel/.test(e.data.source ?? '')).reduce((n, e) => n + e.data.taken, 0));
   assert.ok(d.drafts.offered > 0);
   assert.equal(d.drafts.offered, of('deck.offer').length);
   assert.equal(d.drafts.picked + d.drafts.skipped, of('deck.draft').length);

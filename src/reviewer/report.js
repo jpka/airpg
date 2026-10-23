@@ -41,7 +41,7 @@ export function renderMarkdown(r) {
     for (const [k, v] of [
       ['Plays', `${dk.plays} turns with cards, ${dk.rollPlays} rolled; improvised ${dk.improvised} (${pct(dk.improvisedShare)}), ${dk.edgesPerRoll} Edges per roll`],
       ['Played by type', kv(dk.playedByType)],
-      ['Hands', `${dk.hands.n} drawn, ${pct(dk.statusShareOfHand)} status or compel cards, ${dk.regretStress} regret stress`],
+      ['Hands', `${dk.hands.n} drawn, ${pct(dk.statusShareOfHand)} status or compel cards, ${dk.regretHeld ?? dk.regretStress} compel(s) held at end of turn, ${dk.regretStress} stress paid for them`],
       ['Drafts', `${dk.drafts.picked} picked, ${dk.drafts.skipped} skipped of ${dk.drafts.offered} offered${dk.drafts.picks.length ? ` (${dk.drafts.picks.join(', ')})` : ''}`],
       ['Gained / removed', `gained ${kv(dk.gainsByType)}; removed ${kv(dk.removals)}`],
       ['Drive & flaw', `Drive plays ${kv(dk.drivePlays)}; revealed by Drive ${dk.revealsViaDrive}; flaw plays ${dk.flawPlays}`],
