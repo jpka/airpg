@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { Engine } from '../src/engine/engine.js';
+import { Engine, describeEvent } from '../src/engine/engine.js';
 import { APERTURE } from '../src/content/aperture.js';
 import { ENTITIES } from '../src/content/entities.js';
 import { runSession } from '../src/runner/session.js';
@@ -9,6 +9,7 @@ import { MockGM, MockPlayer } from '../src/agents/agents.js';
 import { reviewSession } from '../src/reviewer/review.js';
 import { extractJson } from '../src/agents/parse.js';
 import { targetMenu } from '../src/agents/prompts.js';
+import { transcript } from '../src/reviewer/judge.js';
 
 const cast = ['choir', 'sort7', 'ilse2'].map((id) => ENTITIES[id]);
 const mk = (rules = {}, seed = 't') => new Engine({ scenario: APERTURE, cast, rules, seed });
@@ -195,6 +196,32 @@ test('v0.3: resting rides along with an action at landmarks, once per scene', ()
   assert.ok(e.events.some((ev) => ev.type === 'haunt.rest' && ev.actor === 'ilse2'));
   const again = e.validateAction('ilse2', { target: 'clue', rest: { haunt: 'warm-bed', memory: 'm1' } });
   assert.ok(!again.addRest);
+});
+
+test('describeEvent covers narration and state-change events', () => {
+  const names = { ilse2: 'Ilse-2', sort7: 'SORT/7' };
+  const d = (type, data, actor) => describeEvent({ type, data, actor }, names);
+  assert.equal(d('ending.narrate', { text: 'It closes.' }), 'GM: It closes.');
+  assert.equal(d('character.epilogue', { text: 'Enough.' }, 'ilse2'), 'Ilse-2: Enough.');
+  assert.equal(d('ending.narrate', { text: '' }), null); // an empty reply adds no dangling "GM: "
+  assert.equal(d('character.epilogue', { text: '' }, 'ilse2'), null);
+  assert.equal(d('delve.forced', { remaining: 2, text: 'It costs them.' }), 'It costs them.');
+  assert.equal(d('complication', { text: 'A shelf re-sorts.' }), 'Complication: A shelf re-sorts.');
+  assert.equal(d('guard.set', { ally: 'ilse2', name: 'Ilse-2' }, 'sort7'), 'SORT/7 guards Ilse-2 until their next turn');
+  assert.equal(d('npc.moved', { npc: 'g', name: 'The Gardener' }, 'sort7'), 'The Gardener is moved by SORT/7');
+  assert.equal(d('stress.heal', { target: 'sort7', resistance: 'boundary', amount: 4, total: 4 }, 'ilse2'), 'Ilse-2 mends SORT/7: 4 boundary stress cleared (total 4)');
+});
+
+test('judge transcript keeps the opening and the ending, within the line budget', () => {
+  const session = { events: Array.from({ length: 300 }, (_, i) => ({ type: 'outcome', data: { text: `line ${i}` } })) };
+  const lines = transcript(session).split('\n');
+  assert.equal(lines.length, 220);
+  assert.equal(lines[0], 'GM: line 0');
+  assert.equal(lines[178], 'GM: line 178');
+  assert.equal(lines[179], '… (81 lines omitted) …');
+  assert.equal(lines[219], 'GM: line 299');
+  for (const max of [0, 1, 10, 30, 79]) assert.ok(transcript(session, max).split('\n').length <= Math.max(1, max), `maxLines ${max}`);
+  assert.equal(transcript({ events: session.events.slice(0, 220) }).split('\n').length, 220); // at the budget, nothing is cut
 });
 
 // ---------------------------------------------------------------- v0.5: clues from entities

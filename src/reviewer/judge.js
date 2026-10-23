@@ -15,10 +15,14 @@ const RUBRIC = {
   spectator_hook: 'Would short clips of this make someone want to watch the whole session?',
 };
 
-export function transcript(session, maxLines = 220) {
+export function transcript(session, maxLines = 220, tailLines = 40) {
   const start = session.events.find((e) => e.type === 'session.start');
   const names = Object.fromEntries((start?.data.cast ?? []).map((c) => [c.id, c.name]));
-  return session.events.map((e) => describeEvent(e, names)).filter(Boolean).slice(0, maxLines).join('\n');
+  const lines = session.events.map((e) => describeEvent(e, names)).filter(Boolean);
+  // Long sessions keep the opening and the ending; the cut falls in the middle.
+  if (lines.length <= maxLines) return lines.join('\n');
+  const tail = Math.min(tailLines, Math.floor(maxLines / 2)), head = Math.max(0, maxLines - tail - 1); // the marker takes one line
+  return [...lines.slice(0, head), `… (${lines.length - head - tail} lines omitted) …`, ...(tail ? lines.slice(-tail) : [])].join('\n');
 }
 
 export async function judgeSession(session, provider, { model = null, tier = 'default' } = {}) {
