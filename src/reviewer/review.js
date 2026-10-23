@@ -219,8 +219,8 @@ export function reviewSession(session, opts = {}) {
     const { rollPlays: R, improvised: imp, drafts: dr, removals: rem } = dm;
     if (dm.improvisedShare <= 0.25 && dm.edgesPerRoll >= 0.8) add('success', 'game', 'hand_fit', 'The hand shaped play', `${R - imp} of ${R} rolled actions were built from a Move in hand (${pc(dm.improvisedShare)} improvised) with ${dm.edgesPerRoll} Edges per roll: the cards drawn were the options taken.`, ix(dk.at.rolled));
     if (dm.improvisedShare > 0.35) add('warning', 'game', 'hand_misfit', 'Hands did not fit the scenes', `${imp} of ${R} rolled actions (${pc(dm.improvisedShare)}) were improvised: no Move in hand fit, so the roll got the base die. Hand size, skill spread or the scene's demands may be off.`, ix(dk.at.improvised));
-    if (dm.statusShareOfHand > 0.25) add('warning', 'game', 'hand_clogged', 'Hands clogged with status cards', `${pc(dm.statusShareOfHand)} of ${dm.hands.cards} cards drawn were status or compel cards (${dm.hands.status}); regret stress paid: ${dm.regretStress}. Conditions pile up faster than haunts clear them.`, ix(dk.at.clogged));
-    if (dr.offered) add('info', 'game', 'drafts', `Drafts: ${dr.picked} of ${dr.offered} offers taken`, `${dr.picked} picked, ${dr.skipped} skipped${dr.offered > dr.picked + dr.skipped ? `, ${dr.offered - dr.picked - dr.skipped} never answered` : ''}. Picks: ${dr.picks.join(', ') || 'none'}.`, ix(dk.at.drafts));
+    if (dm.statusShareOfHand > 0.25) add('warning', 'game', 'hand_clogged', 'Hands clogged with status cards', `${pc(dm.statusShareOfHand)} of ${dm.hands.cards} cards drawn were status or compel cards (${dm.hands.status}); compels held at end of turn: ${dm.regretHeld} (stress paid: ${dm.regretStress}). Conditions pile up faster than haunts clear them.`, ix(dk.at.clogged));
+    if (dr.offered) add('info', 'game', 'drafts', `Drafts: ${dr.picked} of ${dr.offered} offers taken`, `${dr.picked} picked, ${dr.skipped - dr.unanswered} declined${dr.unanswered ? `, ${dr.unanswered} left unanswered (a reply that ignored the offer, not a choice)` : ''}${dr.offered > dr.picked + dr.skipped ? `, ${dr.offered - dr.picked - dr.skipped} still open at the end` : ''}. Picks: ${dr.picks.join(', ') || 'none'}.`, ix(dk.at.drafts));
     if (rem.haunt) add('success', 'game', 'haunt_removals', 'Haunts thinned decks', `${rem.haunt} card(s) set down at haunts: ${dk.at.haunt.map((e) => e.data.card.name).join(', ')}.`, ix(dk.at.haunt));
     else if (by('haunt.rest').length) add('info', 'game', 'haunt_removals', 'Haunts thinned no decks', `${by('haunt.rest').length} rest(s) at haunts, but nobody set a card down.`);
     if (dm.deadCards.length) add('info', 'game', 'unplayed_cards', 'Cards that sat unused', `Drawn at least twice but never played: ${dm.deadCards.join(', ')}. Are they worth a slot in the deck?`);
@@ -337,8 +337,11 @@ function deckStats(ev, humanSeats) {
       playedByType: tally(played),
       hands: { n: hands.length, cards: held.length, status: held.filter(idle).length },
       statusShareOfHand: +share(held.filter(idle).length, held.length).toFixed(3),
-      regretStress: regret.reduce((s, e) => s + e.data.regret.length, 0),
-      drafts: { offered: of('deck.offer').length, picked: picked.length, skipped: drafts.length - picked.length, picks: picked.map((e) => e.data.card.name) },
+      // held = compels still in hand at end of turn; stress = what they actually cost after protection
+      regretHeld: regret.reduce((s, e) => s + e.data.regret.length, 0),
+      regretStress: of('stress').filter((e) => /^compel/.test(e.data.source ?? '')).reduce((s, e) => s + e.data.taken, 0),
+      // skipped = every offer not taken; unanswered = left out of the reply (pre-answer-field sessions count as declined)
+      drafts: { offered: of('deck.offer').length, picked: picked.length, skipped: drafts.length - picked.length, unanswered: drafts.filter((e) => e.data.answer === 'unanswered').length, picks: picked.map((e) => e.data.card.name) },
       removals,
       gainsByType: tally(gains.map((e) => e.data.card)),
       drivePlays, revealsViaDrive: of('algotype.reveal').filter((e) => e.data.via === 'drive').length,

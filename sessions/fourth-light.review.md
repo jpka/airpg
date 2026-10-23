@@ -61,7 +61,7 @@
 - ℹ️ **1 delve(s) had to be forced.** Rounds ran out before the delve resistance reached 0; the party paid Reach stress and the Attractor ticked. _(events 354)_
 - ℹ️ **Consequences that did not occur.** Memory loss. Normal variance in one session; watch across several.
 - ℹ️ **Ingression completed.** At event 375 (70% through). _(events 375)_
-- ℹ️ **Drafts: 8 of 8 offers taken.** 8 picked, 0 skipped. Picks: Hold Shape, Reshape, Chorus, Reshape, Number, Discern, Look Again, Number. _(events 98, 142, 158, 175, 287, 387…)_
+- ℹ️ **Drafts: 8 of 8 offers taken.** 8 picked, 0 declined. Picks: Hold Shape, Reshape, Chorus, Reshape, Number, Discern, Look Again, Number. _(events 98, 142, 158, 175, 287, 387…)_
 
 ## Narrative design report
 
@@ -85,7 +85,7 @@
 |---|---|
 | Plays | 25 turns with cards, 24 rolled; improvised 2 (8%), 1.38 Edges per roll |
 | Played by type | knack 6 · memory 10 · drive 8 · skill 16 · flaw 5 · domain 5 · guard 7 · resolve 3 · calling 3 |
-| Hands | 25 drawn, 2% status or compel cards, 1 regret stress |
+| Hands | 25 drawn, 2% status or compel cards, 1 compel(s) held at end of turn, 1 stress paid for them |
 | Drafts | 8 picked, 0 skipped of 8 offered (Hold Shape, Reshape, Chorus, Reshape, Number, Discern, Look Again, Number) |
 | Gained / removed | gained resolve 3 · compel 1 · condition 1 · domain 2 · memory 3; removed haunt 1 · spent 1 · erased 0 · other 0 |
 | Drive & flaw | Drive plays choir 2 · sort7 2 · ilse2 4; revealed by Drive 1; flaw plays 5 |
