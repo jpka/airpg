@@ -271,7 +271,7 @@ export class MockPlayer {
     const edges = [];
     if (out.memory) {
       const mc = hand.find((k) => k.type === 'memory' && k.memory === out.memory.id)
-        ?? hand.find((k) => k.type === 'memory' && !k.invokedThisScene);
+        ?? hand.find((k) => k.type === 'memory' && !k.invokedThisScene && k.memory !== out.rest?.memory); // never the memory the rest spends
       if (mc) { edges.push(mc); out.memory = mc.memory === out.memory.id ? out.memory : { id: mc.memory, reinterpretation: (VOICE[this.id]?.remember ?? ((x) => x))(mc.memoryText) }; }
       else out.memory = null;
     }

@@ -141,7 +141,8 @@ function duration(e) {
     case 'stress': return 350;
     case 'deck.draw': return 1300;
     case 'deck.play': return 2100;
-    case 'deck.gain': case 'deck.remove': case 'deck.draft': return 2400;
+    case 'deck.gain': case 'deck.remove': return 2400;
+    case 'deck.draft': return e.data.card ? 2400 : 0; // declined drafts are not shown, so they take no time
     default: return isVisible(e) ? 2200 : 0;
   }
 }

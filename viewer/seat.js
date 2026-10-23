@@ -76,7 +76,7 @@ function mountAct(el, req, done) {
       <p class="note">Drafted cards are shuffled into your draw pile. Choose none to keep your deck lean.${d.offer.queued ? ` ${d.offer.queued} more reward${d.offer.queued > 1 ? 's wait' : ' waits'} for your next turn.` : ''}</p></div>` : ''}
     <div data-when="!theorize"><div class="k">Your hand · <span data-edges></span></div>
       <div class="hand-grid" data-hand></div>
-      <p class="note" data-when="improvise">No Move card chosen: you improvise. <label class="inline">Skill <select data-f="skill">${opts(SKILLS.map((x) => [x, x]), s.skill)}</select></label> base die only.</p>
+      <p class="note" data-when="improvise">No Move card chosen: you improvise. <label class="inline">Skill <select data-f="skill">${opts(SKILLS.map((x) => [x, x]), s.skill)}</select></label> base die only, unless you hold a Move for that skill: then it plays (see the dice below).</p>
       <div class="k">Target</div><div class="targets">${req.targets.map((t) => `<button type="button" class="tchip" data-target="${esc(t.target)}" aria-pressed="${t.target === s.target}" title="${esc(t.what)}"><b>${esc(t.target)}</b><span>${esc(t.what)}</span></button>`).join('')}</div>
     </div>
     <label data-when="memory">Retell the memory with a new emphasis <span class="drift" data-drift></span><textarea data-f="retell" rows="3"></textarea></label>
