@@ -233,3 +233,49 @@ test('a second draft offer waits behind the first instead of replacing it', () =
   assert.equal(e.char('sort7').deck.offer, null);
   assert.equal(e.events.filter((ev) => ev.type === 'deck.draft' && ev.actor === 'sort7').length, 2);
 });
+
+test('review fixes: edge order does not matter, a rest spends the named memory, preview never flags', () => {
+  const regentCast = ['regent', 'sort7', 'ilse2'].map((id) => ENTITIES[id]);
+  const pools = [];
+  for (const order of [['threshold', 'mem', 'flaw'], ['flaw', 'threshold', 'mem']]) {
+    const e = new Engine({ scenario: APERTURE, cast: regentCast, seed: 'r' }); e.start(); e.enterScene(1);
+    emptyHand(e, 'regent');
+    const ids = { knack: hold(e, 'regent', (k) => k.type === 'knack').uid, threshold: hold(e, 'regent', (k) => k.type === 'domain' && k.domain === 'Threshold').uid, mem: hold(e, 'regent', (k) => k.memory === 'm1').uid, flaw: hold(e, 'regent', (k) => k.type === 'flaw').uid };
+    const a = e.validateAction('regent', { target: 'delve', do: 'regrow the path', play: [ids.knack, ...order.map((o) => ids[o])], memory: { reinterpretation: 'Two heads, one road.' } });
+    pools.push(a.pool);
+    assert.ok(a.deck.edges.some((k) => k.type === 'flaw'));
+  }
+  assert.equal(pools[0], pools[1]);
+  const e = mk(); e.enterScene(2);
+  assert.equal(e.validateAction('ilse2', { target: 'haunt:warm-bed', rest: { haunt: 'warm-bed', memory: 'm3' } }).rest.memory, 'm3');
+  const n = e.events.length;
+  e.previewAction('sort7', { target: 'aperture', do: 'look' }); // outside SORT/7's cone
+  assert.equal(e.events.length, n);
+});
+
+test('design calls: a set-down card is gone before the dice, the sheet follows the deck, unanswered drafts are logged', () => {
+  const e = mk(); e.enterScene(2); // garden: haunts, a draft on the table for everyone
+  e.applyFallout({ actor: 'choir', severity: 'minor', resistance: 'substrate' }, 'leaking'); // −1 on Endure, Reshape
+  emptyHand(e, 'choir');
+  const leak = hold(e, 'choir', (k) => k.name === 'Leaking');
+  const endure = hold(e, 'choir', (k) => k.skill === 'Endure');
+  const keep = e.validateAction('choir', { target: 'clue', do: 'hold the bed still', play: [endure.uid] });
+  const drop = e.validateAction('choir', { target: 'clue', do: 'hold the bed still', play: [endure.uid], rest: { haunt: 'warm-bed', memory: 'm3', remove: leak.uid } });
+  assert.ok(keep.poolParts.includes('-Leaking') && !drop.poolParts.includes('-Leaking'));
+  assert.equal(drop.pool, keep.pool + 1);
+  // Draft a skill the sheet lacks: it joins the sheet; set down its only card: it leaves again.
+  const offer = e.char('sort7').deck.offer;
+  const skillCard = offer.cards.find((k) => k.kind === 'move' && !e.char('sort7').skills.includes(k.skill));
+  assert.ok(skillCard, 'the Garden offers SORT/7 a skill it lacks (the Gardener is moved by Reshape and Mend)');
+  e.declare('sort7', { say: 'Noted.', target: 'none', draft: skillCard.offerId });
+  assert.ok(e.char('sort7').skills.includes(skillCard.skill));
+  const k = cardsInPlay(e.char('sort7').deck).find((x) => x.skill === skillCard.skill);
+  e.removeCard('sort7', k.uid, 'set down at test');
+  assert.ok(!e.char('sort7').skills.includes(skillCard.skill));
+  e.declare('ilse2', { say: 'Not now.', target: 'none' }); // no "draft" key at all
+  const ev = e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'ilse2');
+  assert.equal(ev.data.answer, 'unanswered');
+  assert.ok(e.events.some((x) => x.type === 'validator.flag' && x.data.kind === 'draft' && x.actor === 'ilse2'));
+  e.declare('choir', { say: 'No thank you.', target: 'none', draft: null });
+  assert.equal(e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'choir').data.answer, 'declined');
+});

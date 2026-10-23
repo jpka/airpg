@@ -186,9 +186,13 @@ export function targetMenu(view) {
 export function handForPrompt(deck) {
   return deck.hand.map((k) => {
     const o = { id: k.uid, name: k.name, kind: k.kind, text: k.text };
-    if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; }
+    if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; if (deck.hand.some((x) => x.mutesMemory && x !== k)) o.note = 'worth +0 while you hold your flaw (play the flaw to lift it)'; }
     if (k.type === 'drive') o.inclination = k.disposition;
     if (k.type === 'domain') o.here = k.here ? 'yes: +1 die here' : 'no: +0 here';
+    // Conditions as fields, not prose: fourth light's misplays were all conditional cards.
+    if (k.onlyTargets) o.only_if_target = k.onlyTargets.join(' or ');
+    if (k.edgeFor) o.only_with_move = k.edgeFor.join(' or ');
+    if (k.kind === 'compel') o.discard_only_with_move = deck.lastMove ?? 'none yet: keep it, it costs 1 Coherence';
     return o;
   });
 }
@@ -228,9 +232,9 @@ export function playerActPrompt(view) {
 function deckRules(view) {
   const d = view.you.deck;
   return [
-    `YOUR HAND (${d.hand.length} cards; your hand size is 3 + your Horizon): ${j(handForPrompt(d))}`,
+    `YOUR HAND (${d.hand.length} cards; your hand size grows with your Horizon): ${j(handForPrompt(d))}`,
     `YOUR DECK: ${d.drawPile} to draw, ${d.discardPile} discarded. Your deck is who you are: skills, domains, memories, your flaw, your drive, and what has happened to you.`,
-    `HOW CARDS PLAY: list card ids in "play". At most ONE Move (it sets your skill: +1 die, a knack +2, on ANY target; how it fits is yours to narrate). Up to ${d.edgesAllowed} Edge(s) add dice: a domain only where the place has it, a Memory only with a retelling, your Drive only if the act leans the way you lean, your flaw only with the Moves it names. Guard and Compel cards are free. Status cards cannot be played; they hurt while held. No Move card that fits? Play any Move anyway (narrate how), or improvise: set "skill", base die only. Whatever you do not play is discarded at the end of your turn.`,
+    `HOW CARDS PLAY: list card ids in "play". At most ONE Move (it sets your skill: +1 die, a knack +2, on ANY target; how it fits is yours to narrate). Up to ${d.edgesAllowed} Edge(s)${d.hand.some((k) => (k.focus ?? 0) < 0) ? ` (${d.edgesAllowed - Math.min(...d.hand.map((k) => k.focus ?? 0))} if you play ${d.hand.find((k) => (k.focus ?? 0) < 0).name}: played, it stops costing you the slot)` : ''} add dice: a domain only where the place has it, a Memory only with a retelling, your Drive only if the act leans the way you lean, your flaw only with the Moves it names. Guard and Compel cards are free. Status cards cannot be played; they hurt while held. No Move card that fits? Play any Move anyway (narrate how), or improvise: set "skill", base die only. Whatever you do not play is discarded at the end of your turn.`,
     d.lastMove && d.hand.some((k) => k.kind === 'compel') ? `Your last Move was ${d.lastMove}: play your Compel card with a ${d.lastMove} Move to discard it, or it costs 1 Coherence at the end of your turn.` : '',
     (view.location?.isDelve === false && view.location?.haunts?.length && d.cards.some((k) => k.removable))
       ? `CARDS YOU COULD SET DOWN AT A HAUNT ("remove"): ${j(d.cards.filter((k) => k.removable).map((k) => ({ id: k.uid, name: k.name, type: k.type })))}`

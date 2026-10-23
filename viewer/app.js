@@ -103,11 +103,17 @@ function reduce(st, e) {
     case 'session.abort': st.overlay = { type: 'note', e, k: 'Stopped', t: d.reason }; break;
     case 'deck.build': st.decks[e.actor] = { size: d.size, handSize: d.handSize }; break;
     case 'deck.draw': st.hands[e.actor] = d.hand; st.played[e.actor] = []; if (st.decks[e.actor]) st.decks[e.actor].handSize = d.handSize; break;
-    case 'deck.play': st.played[e.actor] = [d.move, ...(d.edges ?? []), d.guard, d.compel].filter(Boolean).map((k) => k.uid); st.overlay = { type: 'cards', e }; break;
+    case 'deck.play': {
+      const cards = [d.move, ...(d.edges ?? []), d.guard, d.compel].filter(Boolean);
+      st.played[e.actor] = cards.map((k) => k.uid);
+      if (st.decks[e.actor]) st.decks[e.actor].size -= cards.filter((k) => k.exhaust).length; // one-use cards leave
+      st.overlay = { type: 'cards', e };
+      break;
+    }
     case 'deck.discard': st.hands[e.actor] = null; break;
     case 'deck.gain': if (st.decks[e.actor]) st.decks[e.actor].size++; st.overlay = { type: 'card', e, k: `New card · ${d.why}`, t: d.card.text }; break;
     case 'deck.remove': if (st.decks[e.actor]) st.decks[e.actor].size--; st.overlay = { type: 'card', e, k: `Card leaves the deck · ${d.why}`, t: `${st.names[e.actor]} will not draw ${d.card.name} again.` }; break;
-    case 'deck.draft': if (d.card) st.overlay = { type: 'card', e, k: `Draft · ${d.why}`, t: `${st.names[e.actor]} takes ${d.card.name}${d.offered?.length > 1 ? ` over ${d.offered.filter((x) => x !== d.card.name).join(' and ')}` : ''}.` }; break;
+    case 'deck.draft': if (d.card && st.decks[e.actor]) st.decks[e.actor].size++; if (d.card) st.overlay = { type: 'card', e, k: `Draft · ${d.why}`, t: `${st.names[e.actor]} takes ${d.card.name}${d.offered?.length > 1 ? ` over ${d.offered.filter((x) => x !== d.card.name).join(' and ')}` : ''}.` }; break;
     default: break;
   }
   if (P && e.type === 'fallout' && P.tags.length > 3) P.tags = P.tags.slice(-3);
@@ -342,6 +348,7 @@ function miniCard(k, { played = false, big = false } = {}) {
 // The runner awaits humanUI.request(); the seat panel renders it and resolves on submit.
 const humanUI = {
   request: (req) => new Promise((resolve) => {
+    if (S.live?.stop) { resolve(defaultReply(req)); return; } // stopping: never wait on a person again
     S.human.pending = { req, resolve };
     const host = $('#seat');
     host.hidden = false;
@@ -591,7 +598,7 @@ function renderLive() {
     const p = S.human?.pending; // release a runner waiting on you, so it can stop
     if (p) { S.human.pending = null; p.resolve(defaultReply(p.req)); }
   });
-  $('#yourTurn').addEventListener('click', () => $('#seat').scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  $('#yourTurn').onclick = () => $('#seat').scrollIntoView({ behavior: 'smooth', block: 'start' }); // renderLive runs twice; assign, don't stack
   el.querySelectorAll('[data-aud]').forEach((b) => b.addEventListener('click', () => { if (S.live?.running) { S.live.audience = b.dataset.aud; $('#audStatus').textContent = `Queued: ${b.textContent} — lands at the next scene.`; } }));
 }
 

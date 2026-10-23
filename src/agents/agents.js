@@ -277,7 +277,6 @@ export class MockPlayer {
     }
     const dom = hand.find((k) => k.type === 'domain' && k.here);
     if (dom) edges.push(dom);
-    out.domain = dom?.domain ?? null;
     const flaw = hand.find((k) => k.type === 'flaw' && k.edgeFor?.includes(out.skill));
     if (flaw) edges.push(flaw);
     const oneUse = hand.find((k) => ['resolve', 'gift', 'insight'].includes(k.type));
@@ -289,7 +288,9 @@ export class MockPlayer {
     const voice = hand.find((k) => k.type === 'voice');
     if (voice && r.next() < 0.4) edges.push(voice);
     // Playing a flaw that costs focus frees the slot it was costing.
+    if (flaw?.focus < 0) edges.unshift(...edges.splice(edges.indexOf(flaw), 1)); // it frees its own slot only if kept
     const kept = edges.slice(0, deck.edgesAllowed - (flaw?.focus ?? 0));
+    out.domain = dom && kept.includes(dom) ? dom.domain : null;
     if (out.memory && !kept.some((k) => k.type === 'memory')) out.memory = null;
     out.play.push(...kept.map((k) => k.uid));
     const compel = hand.find((k) => k.kind === 'compel');
