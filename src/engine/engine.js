@@ -387,7 +387,7 @@ export class Engine {
   #applyCards(c, out, picked, issues) {
     const roll = out.needsRoll && out.kind === 'act';
     const d = { move: null, edges: [], guard: null, compel: null, improvised: false, dropped: [], ward: 0, extraClue: 0, allowed: 0, held: [] };
-    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk (target ${out.target.type})` : null);
+    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk` : null);
     const drop = (k, why) => { if (!d.dropped.includes(k.uid)) d.dropped.push(k.uid); if (why) issues.push(why); };
     const moves = picked.filter((k) => k.kind === 'move');
     if (roll) {

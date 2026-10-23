@@ -308,4 +308,6 @@ test('v0.5: a search in a delve is refused before any card is spent', () => {
   assert.ok(e.char('sort7').deck.hand.includes(discern) && e.char('sort7').deck.hand.includes(look)); // nothing wasted
   assert.ok(!e.events.some((ev) => ev.type === 'deck.play' && ev.actor === 'sort7'));
   assert.ok(e.events.some((ev) => ev.type === 'validator.flag' && /nothing to search in a delve/.test(ev.data.detail)));
+  // review: the talk-only notice must not contradict the refusal by naming 'target none'
+  assert.ok(!e.events.some((ev) => ev.type === 'validator.flag' && /target none/.test(ev.data.detail)));
 });
