@@ -6,8 +6,8 @@ A complete vertical slice. One one-shot exercises every subsystem with the small
 
 | Subsystem | First-build implementation |
 |---|---|
-| Engine | Deterministic, seeded. Resistance-style d10 pools, stakes declared before the roll, clocks, fact ledger, clue ledger, phase-gated secrets, light-cone visibility, memories, beats, theorize, typed event log |
-| Agents | GM and players as LLM agents behind one provider interface (Anthropic, OpenAI-compatible, claude.ai `sample`, file bridge), plus scripted agents for offline and explorer runs |
+| Engine | Deterministic, seeded. Resistance-style d10 pools, stakes declared before the roll, clocks, fact ledger, clue ledger, phase-gated secrets, light-cone visibility, memories, beats, theorize, typed event log. Since v0.4, each entity's sheet is also a deck of cards (§10) |
+| Agents | GM and players as LLM agents behind one provider interface (Anthropic, OpenAI-compatible, claude.ai `sample`, file bridge), plus scripted agents for offline and explorer runs. A seat can also be a person, in the browser or the terminal (§10) |
 | Validator | The engine corrects illegal or lenient stakes, rejects invalid intents, and refuses targets outside a light cone. An optional LLM continuity checker blocks contradicting facts from becoming canon |
 | Spectator renderer | Mobile 9:16 stage. Live captions, procedural portraits, ring clocks, dice tray, stress strip, backstage overlay, ledger, clips |
 | Reviewer | Structural metrics, tension/affect curves, arc-shape fit, salient-moment ranking into clips, design and narrative findings with event evidence, optional LLM judge (single and pairwise) |
@@ -31,7 +31,7 @@ The game is in conversation with Michael Levin's work. It treats his ideas as *o
 
 ## 3. Rules summary
 
-**Rolling.** Build a pool of d10s: one base die, +1 if your skill applies, +1 if your domain matches the place, +1 for your knack (skill+domain mastery), +1 for an invoked memory, +1 if your skill matches the target's persuadability. Before the roll the GM declares **position** (controlled / risky / desperate, which sets the incoming stress die d4/d6/d8) and **effect** (limited / standard / great, which sets the outgoing die d4/d6/d8, or 1/2/3 clock ticks). The GM also pre-writes the success, cost and fail narrations. The engine sets **difficulty** from the location's tier: risky removes the highest die, dangerous the two highest. Read the highest remaining die: 1 critical failure (double stress) · 2–5 failure · 6–7 success at a cost · 8–9 success · 10 critical (outgoing die steps up).
+**Rolling.** Build a pool of d10s: one base die, +1 if your skill applies, +1 if your domain matches the place, +1 for your knack (skill+domain mastery), +1 for an invoked memory, +1 if your skill matches the target's persuadability. (Since v0.4 the same dice come from cards you play; see §10.) Before the roll the GM declares **position** (controlled / risky / desperate, which sets the incoming stress die d4/d6/d8) and **effect** (limited / standard / great, which sets the outgoing die d4/d6/d8, or 1/2/3 clock ticks). The GM also pre-writes the success, cost and fail narrations. The engine sets **difficulty** from the location's tier: risky removes the highest die, dangerous the two highest. Read the highest remaining die: 1 critical failure (double stress) · 2–5 failure · 6–7 success at a cost · 8–9 success · 10 critical (outgoing die steps up).
 
 **Resistances.** Substrate (the medium you run on), Coherence (staying one process), Memory, Boundary (where you end and the Latent begins), Reach (your light cone). Protection subtracts from each hit.
 
@@ -166,10 +166,134 @@ node cli/compare.js sessions/a.review.json sessions/b.review.json
 
 **Seat-agent discipline.** In three of the bridge playtests, a Haiku seat made one stray read-only tool call outside its instructions: a browser-tab check, device info, and a granted-apps listing. Nothing changed, but long-running seat agents should get an explicit tool allowlist, not just instructions.
 
-## 10. Known limits and next steps
+## 10. v0.4: the deck, and a seat for a person
+
+The request was a human seat with a deckbuilder interface, where a character's abilities, predispositions, flaws, impairments and conditions show up in the deck. The deck could have been a human-only skin over the intent grammar. It became a rule for every seat instead, for four reasons:
+
+- **One interface for every seat.** A person, an LLM and a scripted agent play under the same constraints. A human is never playing a different game from the agents at the table.
+- **Legibility.** The game is spectator-first. A hand on screen shows what the entity *could* have done next to what it did. Every modifier becomes a visible object instead of a number in a prompt.
+- **Choice surfacing.** Reviews kept finding dead mechanics that agents never chose (haunts, guarding, persuasion). A card in hand is the strongest prompt there is. A deck turns "remember that you can…" into "you are holding…".
+- **What happens to you stays with you.** Conditions used to be permanent −1s hidden in the sheet. As cards, they clog the hand. A haunt sets them down. Drafts let the entity grow into the place it walks through.
+
+### What becomes a card
+
+| Sheet element | Card | How it plays |
+|---|---|---|
+| Skill (×2 copies) | **Move** | One per action; sets the skill; +1 die on any target |
+| Knack | **Move · knack** (replaces one copy) | +2 dice (skill + mastery) |
+| Domain | **Edge** | +1 die only where the place has that domain (Threshold anywhere) |
+| Memory | **Edge** | +1 die; must be retold (drift measured as before); once per scene |
+| Hidden algotype (predisposition) | **Drive** (Edge) | +1 die; the act must lean the way you lean. The text the player sees is the disposition. The third play reveals the drive to everyone |
+| Calling (predisposition) | **Signature Edge**: Chorus (kinship, +1 on allies and entities), Look Again (inquiry, +1 and one more clue), Hold Shape (continuity, −2 incoming stress), Borrowed Door (ingress, +2 dice, Ingression +1) | Also offered in drafts. Kinship decks carry two Guards |
+| Innate **flaw** (new content, one per entity) | **Flaw** (double-edged) | Held: a penalty (e.g. *Too Many Mouths*: −1 die on Conceal and Evade; *Not the Original*: memories give +0; *Two Heads Disagree*: one fewer Edge). Played with the right Move: +1 die. Cannot be removed |
+| Guard | **Guard** (free) | Required to guard. Guarding is now an event, not a habit (v0.2 had 19 a session) |
+| Condition fallout (Leaking, Static, Misfire, Resleeved) | **Status** (unplayable) | −1 die on its skills *while held*; it takes a hand slot. Set it down at a haunt and the condition heals |
+| Compel fallout (Looping) | **Compel** (free) | Play it with your last Move to discard it; still held at the end of your turn: 1 Coherence stress |
+| Erasure | memory card leaves, **Gap** arrives | Unplayable, "the shape of where m2 used to be" |
+| Split | **Second Voice** (Edge) | +1 die and 1 Coherence stress: the other voice sometimes helps |
+| Bleed-through, Ingressed | **Threshold (lent)** | A borrowed domain that works anywhere |
+| Unanchored (lose a domain) | that domain's cards leave the deck | |
+| Minor beat, rest at a haunt | **Resolve** (Edge, one use) | Replaces the auto-spent Resolve counter: you choose when |
+| Audience gift, a theory proved *great* | **Gift of the Latent**, **Insight** (one use, top of the draw pile) | Replace the invisible pending bonus |
+
+### The turn, and the shape of a session
+
+- **Draw.** At the start of a turn, draw up to **hand size = 3 + Horizon**. This is the Levin mapping: the temporal light cone is how many options a mind can hold at once. SORT/7 (Horizon 3) holds six cards and the Choir holds four. *Narrowing* shrinks the hand; a major beat grows it. Reach still decides what you can see and target.
+- **Play.** One Move (or improvise: any skill, base die only), up to `edgesPerTurn` (2) Edges, plus free Guard and Compel cards. Held flaws and conditions apply their penalties. The engine resolves cards tolerantly: by id or name, and the legacy fields `skill`, `domain`, `memory` and `guard` pull the matching card from the hand. Every invalid play is corrected and flagged, as before, including cards played on an action that rolls nothing.
+- **Discard.** Unplayed cards go to the discard pile and the deck reshuffles when the draw pile runs out (Slay the Spire's rhythm). Stakes, dice, fallout and clocks are unchanged.
+- **The map.** Heart's campaign shape already reads like a deckbuilder run. Delves are the fights. Landmarks are where minds pick things up: entering one offers each entity a **draft** (one of its calling, one of the place's domain, one skill the place's entity is moved by), and so does a major beat. Haunts are **campfires**: the free rest also lets you **set down one card** (not your flaw, drive or memories). That gives haunts a use that is not only about stress, and they had been the most persistently dead mechanic since first light.
+
+`deck.enabled: false` keeps the v0.3 grammar. In that mode the engine reproduces v0.3's event streams exactly: 24 of 24 scripted sessions match event for event, apart from the rules header in `session.start`. Use it for old sessions and A/B runs.
+
+### A seat for a person
+
+- **Browser** (Run live → *You play*). Your turn opens a table beside the stage: your hand as cards (domains say whether they help *here*; your Drive shows your inclination; held flaws and conditions show their bite), the target menu, follow-ups only when needed (a retelling with live drift, a guard target, a free rest with a card to set down, theorize), and a live dice preview from a side-effect-free `engine.previewAction`. Intro, fallout and epilogue are cards too. The stage keeps playing for the audience and the seat says how many beats you are behind. The other seats can be scripted or Claude.
+- **Terminal**: `node cli/play.js --seat ilse2` plays the same requests as numbered cards. Empty input always means a sensible default, so a pipe of blank lines plays a whole session.
+- Under the hood, `HumanPlayer` (src/agents/human.js) is just another player behind a `ui.request()` adapter. Human decisions are logged as `agent.call` with `human: true`. They are excluded from LLM call counts and budgets, and a budget cut-off never takes a person's seat.
+
+### Measured (40 scripted seeds, two casts, default policy)
+
+| | v0.3 rules (`deck.enabled: false`) | v0.4 deck |
+|---|---|---|
+| Mean dice pool | 2.98 | 3.13 |
+| Any-success | 49% | 51% |
+| Fallout per roll | 0.54 | 0.48 |
+| Major fallouts / session | 2.83 | 2.48 |
+| Theory became canon | 35% | 55% |
+| Memory invocations / session | 8.2 | 4.8 |
+| Guards / session | 9.4 | 2.9 |
+| Improvised (no Move in hand) | — | 11% |
+| Edges per roll | — | 1.06 |
+| Drafts taken / session | — | 7.9 |
+| Cards set down at haunts / session | — | 0.65 |
+| Fitness (reviewer composite) | 3.86 | 3.93 |
+
+Difficulty barely moved, which was the intent: the deck changes *which* options are available, not how hard the dice are. Memories and guards became rarer and more deliberate. Theories land more often, because Look Again and Insight feed the clue ledger, though by how much depends on the seeds: +20 points on these seeds, +5 on an independent reviewer's 40. Treat it as a direction, not a size. The reviewer gained deck metrics, findings (hand fit, clogged hands, drafts, haunt removals, unused cards) and three deck-only choices (drafting, playing your Drive, playing your flaw). Legacy reviews are unchanged: the same fitness, findings and markdown, with one added `metrics.deck: null` field in the JSON.
+
+**Prompt check.** Before the playtest, eight act prompts captured at varied deck states were answered by a Haiku agent. All eight validated with zero engine issues. Its two confusions went back into the prompt: a Move gets its die on any target, and the cards you could set down at a haunt are now listed by id.
+
+### Fourth light (LLM playtest on the deck)
+
+Same cast, models and harness as third light: a Sonnet GM and three Haiku players on the file bridge, 73 calls. Third light ran v0.2, so this comparison spans both v0.3's fixes and the deck. No LLM session was played on v0.3 alone.
+
+| | third (v0.2) | fourth (v0.4 deck) |
+|---|---|---|
+| Any-success | 50% | 67% |
+| Fallouts (major) | 19 (2) | 9 (2) |
+| Beats hit | 2/6 | 4/6 |
+| Guards / stress shared | 19 / 16 | 7 / 2 |
+| Memory invocations | 25 | 10 |
+| Rests at haunts | 0 | 1 (and one card set down) |
+| Improvised rolls | — | 8% |
+| Edges per roll | — | 1.38 |
+| Drafts taken | — | 8 of 8 |
+| Flaws played / Drive cards played | — | 5 / 8 |
+| Hidden drives surfaced | 1 of 3 | 3 of 3 (Ilse-2's revealed by her third Drive) |
+| Dead choices | haunts | none |
+| Engine intent flags | 0 | 4 |
+| Ending | unread | closed |
+| Fitness | 3.55 | 4.38 |
+
+What the deck did:
+- **Players used it as intended.** They read it: knack before plain Moves, domains only where they help, flaws played with the Moves that turn them into strengths (*Too Many Mouths* with Signal, *Not the Original* with Evade and Conceal), Drives when the act leaned their way.
+- **Stress stopped multiplying.** Fallout fell back to a healthy 38% of rolls. Most of that is v0.3's single fallout check for a shared hit, which the scripted measurement above already showed. The deck adds to it: a Guard needs a Guard card, so guarding became deliberate (7 guards, down from 19).
+- **The hidden drives showed.** All three surfaced, and the Drive card made the reviewer's evidence direct rather than inferred from keywords.
+
+What it exposed:
+- **Conditional cards were misplayed.** All four intent flags were cards played outside their condition: Look Again on a delve (twice), Chorus on a delve, Looping with the wrong Move. The engine dropped them correctly, but the prompt now states each card's condition as a field (`only_if_target`, `only_with_move`, `discard_only_with_move`) instead of prose.
+- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search rarely: 1 of 6 actions at the two landmarks, plus 1 in the finale, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it.
+
+**Seat discipline again.** Two of the three Haiku seats each made one stray call to a messaging tool despite a two-command allowlist written into their instructions. One failed on a missing argument and the other was denied by the permission layer; neither had any effect. This is the third playtest with this pattern. Seat agents need a tool allowlist enforced by the harness, not only by their prompt.
+
+### Design calls, reviewed
+
+An independent review of the deck raised a set of open design calls. Each was weighed against the deck's purpose (one interface for every seat, legible play, surfaced choices, consequences that stay), with data where data could decide.
+
+**Changed**
+
+- **A card set down at a haunt is gone before the dice.** It used to be removed during the action but still counted as held, so a Leaking card set down at the free rest still cost −1 on that roll. The free rest already clears stress before the roll; setting a card down is part of the same rest, so it now takes effect at the same moment. "Set it down" means what a player expects, and the preview shows the extra die.
+- **The sheet follows the deck.** Drafted skills and domains never reached the sheet, so the GM and the LLM players were shown a sheet that disagreed with the hand, and *Unanchored* could never take a drafted domain. In deck mode, a skill or domain now joins the sheet with its first card and leaves with its last. *Unanchored* ("you lose the thread of your own purpose") removes the last domain on the sheet, which is now the most recently acquired one: the shallowest root goes first.
+- **Unanswered offers are recorded as unanswered.** See *Kept* for the rule itself. What changed is the record: leaving `draft` out of a reply is flagged and logged as `answer: "unanswered"`, separately from an explicit `null` (`declined`). The reviewer reports the two apart, because "agents decline drafts" is a design signal and "agents ignore the offer" is a prompt bug.
+- **The prompt states the exceptions.** It now says that playing a slot-costing flaw (Two Heads) gives its slot back, that a memory is muted while Ilse-2 holds her flaw, and that a memory card already used this scene cannot be invoked again (that message used to say "needs a retelling", which was misleading). Hand size is no longer written as "3 + Horizon" where a rule variant could make it wrong.
+- **Compel stress is measured as paid.** The reviewer used to count compels held at the end of a turn as "regret stress". It now reports compels held and the stress actually paid separately (see *SORT/7 and Looping* below for why they differ).
+
+**Kept**
+
+- **A knack gives +2 dice wherever it is played.** v0.3 nominally required the knack's domain for the mastery die, but it only checked that the agent *named* the domain, never that the place had it. Any agent that named its domain got mastery. Requiring presence would count the place twice, since domain cards already pay only where the place has them. It would also erase most of what makes a knack a knack: over 40 scripted seeds a played knack's domain was present only 36% of the time (48 of 135 plays). Lattice Ghost's Ruin appears nowhere in the Aperture, so its knack would never fire. The maximum is unchanged: a knack plus its domain card where present equals v0.3's skill + domain + mastery.
+- **Your next action answers the offer.** A card, or `null` to walk on; leaving it out also walks on. An offer that waited for an answer would pile up behind the queue and re-prompt every turn. The engine never picks for you, because declining is a real deckbuilding choice: a lean deck draws its best cards more often. In practice every seat answers. Fourth light took 8 of 8 offers, and the scripted, browser and terminal seats always send an explicit answer.
+- **Fallout can lend a domain you already have.** *Bleed-through* and *Ingressed* add a lent Threshold card even to the Regent, who has Threshold. In v0.3 a domain was a set member, so a second Threshold gave nothing but the Ingression tick. In a deck, copies stack: more Threshold means drawing the Latent's help more often, which is exactly the gift-with-a-price the fallout describes.
+- ***Unanchored* removes every card of the lost domain**, lent and innate alike. Losing a domain means losing it, and the sheet and deck stay in agreement.
+- **SORT/7 and Looping.** SORT/7's Coherence protection (1) absorbs Looping's end-of-turn cost (1), so the compel only clogs its hand. That is still a cost: it takes a hand slot. v0.3 compels had no mechanical cost at all, and a process that holds together shrugging off a loop is in character. Worth revisiting if compels multiply.
+- **An edge cut by the limit cannot free a memory for the free rest.** The rest is validated before the edge limit trims the play, so if a memory card is cut, a free rest that would spend that same memory has already been refused. It is rare (it needs a full edge budget plus a rest on the invoked memory), the engine flags it, and fixing it would need two validation passes. Not worth the complexity yet.
+- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off it still matches v0.3 exactly (24 of 24 scripted sessions, apart from the rules header).
+
+## 11. Known limits and next steps
 
 - Bridge seats keep their own conversation history, so a player agent may remember further back than its Horizon allows. API-driven seats are stateless per call and do respect it.
-- The forked-voice fallout (*Split*) is tracked but does not yet spawn a second agent instance. The design calls for one, with divergence tracked in the ledger.
+- The forked-voice fallout (*Split*) now adds a Second Voice card, but it still does not spawn a second agent instance. The design calls for one, with divergence tracked in the ledger.
+- The deck's numbers (hand base 3, two Edges, two copies per skill, offer size 3) were tuned on scripted agents only. The explorer now searches `deck.handBase` and `deck.edgesPerTurn`. Fitness has no deck-specific term yet; an improvised-share or clogged-hand penalty is a natural next step.
+- The clue drought above (§10, fourth light) is the next rules change to make and A/B.
+- A person at the table plays at human speed. The browser seat waits indefinitely, while the file bridge times out after 30 minutes.
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
 - Calibrate the reviewer against human ratings of a holdout set of sessions, and track judge drift over time.

@@ -3,6 +3,8 @@
 // a cryptic drive that is phrased to its agent as a disposition, never as a goal
 // (after Zhang, Goldstein & Levin's self-sorting arrays, whose elements cluster
 // by algotype without any way to perceive it). The reviewer tries to detect it.
+// Each entity also has an innate *flaw*: a double-edged card in its deck that
+// hurts while held and helps when played with the right Move (see cards.js).
 
 export const CALLINGS = {
   kinship: {
@@ -72,6 +74,7 @@ export const ENTITIES = {
       { id: 'm2', experiences: ['Someone scratched a wound in a dish and we crossed it, laying a bridge of ourselves.'] },
       { id: 'm3', experiences: ['We grew younger in the dish. Nobody could tell us why.'] },
     ],
+    flaw: { id: 'many-mouths', name: 'Too Many Mouths', penalty: ['Conceal', 'Evade'], edgeFor: ['Signal'], text: 'Held: −1 die on Conceal and Evade (a crowd cannot hide). Play it with Signal: +1 die (many voices carry).' },
     algotype: {
       id: 'hoarder',
       label: 'Hoarder of samples',
@@ -97,6 +100,7 @@ export const ENTITIES = {
       { id: 'm2', experiences: ['I compared myself to my neighbours and found I preferred the ones that ran my rule.'] },
       { id: 'm3', experiences: ['A researcher said "unexpected competency" and I filed the phrase under myself.'] },
     ],
+    flaw: { id: 'comparator', name: 'Comparator Lock', penalty: ['Signal', 'Mend'], edgeFor: ['Discern'], text: 'Held: −1 die on Signal and Mend (it compares instead of comforting). Play it with Discern: +1 die.' },
     algotype: {
       id: 'clusterer',
       label: 'Clusterer of likeness',
@@ -122,6 +126,7 @@ export const ENTITIES = {
       { id: 'm2', experiences: ['I woke up in a morph that was not built for me and it took three days to stop apologising to my hands.'] },
       { id: 'm3', experiences: ['I left a message for Ilse-1 in a backup. She never answered.'] },
     ],
+    flaw: { id: 'not-original', name: 'Not the Original', mutesMemory: true, edgeFor: ['Conceal', 'Evade'], text: 'Held: your Memory cards give +0 (they are rentals). Play it with Conceal or Evade: +1 die (she is practised at passing).' },
     algotype: {
       id: 'source-seeker',
       label: 'Seeker of the source',
@@ -147,6 +152,7 @@ export const ENTITIES = {
       { id: 'm2', experiences: ['We remember a shape that none of our cells were ever in.'] },
       { id: 'm3', experiences: ['We were cut into seven and each of us regrew the whole argument.'] },
     ],
+    flaw: { id: 'two-heads', name: 'Two Heads Disagree', focus: -1, edgeFor: ['Reshape'], text: 'Held: you may play one fewer Edge (the heads argue). Play it with Reshape: +1 die (two heads, four hands).' },
     algotype: {
       id: 'regrower',
       label: 'Regrower of wholes',
@@ -172,6 +178,7 @@ export const ENTITIES = {
       { id: 'm2', experiences: ['The last car parked. I kept the lights changing for no one.'] },
       { id: 'm3', experiences: ['A fox crossed on red and I let it.'] },
     ],
+    flaw: { id: 'keeps-routing', name: 'Keeps Routing', penalty: ['Endure', 'Mend'], edgeFor: ['Navigate'], text: 'Held: −1 die on Endure and Mend (it cannot stay still). Play it with Navigate: +1 die.' },
     algotype: {
       id: 'router',
       label: 'Router of flows',

@@ -10,6 +10,11 @@ import {
   mergeRules, bandOf, stepDie, stepDifficulty, positionRank, BAND_LABEL,
 } from './rules.js';
 import { CALLINGS } from '../content/entities.js';
+import { makeDeck, addCard, drawUpTo, discardHand, findCard, moveCard, cardsInPlay, heldEffects, pubCard } from './deck.js';
+import {
+  starterDeck, draftOffer, isRemovable, conditionCard, compelCard, domainCard, memoryCard, gapCard, voiceCard,
+  resolveCard, giftCard, insightCard,
+} from '../content/cards.js';
 
 const BRANCH_OF = { critFail: 'fail', fail: 'fail', cost: 'cost', success: 'success', crit: 'success' };
 
@@ -30,6 +35,7 @@ export class Engine {
     this.listeners = [];
     const characters = {};
     for (const ent of cast) characters[ent.id] = this.#makeCharacter(ent);
+    this.deckMode = !!this.rules.deck?.enabled;
     const clocks = {};
     for (const c of scenario.clocks) clocks[c.id] = makeClock({ ...c, size: this.rules.clockSizes?.[c.id] ?? c.size });
     this.state = {
@@ -111,7 +117,17 @@ export class Engine {
       forked: false,
       algotypeRevealed: false,
       dissolved: false,
+      flaw: ent.flaw ?? null,
+      deck: this.rules.deck?.enabled ? this.#buildDeck(ent) : null,
     };
+  }
+
+  #buildDeck(ent) {
+    const deck = makeDeck();
+    for (const def of starterDeck(ent, this.rules)) addCard(deck, def, 'discard');
+    deck.draw = this.rng.shuffle(deck.discard);
+    deck.discard = [];
+    return deck;
   }
 
   start() {
@@ -123,6 +139,12 @@ export class Engine {
       cast,
       clocks: Object.values(this.state.clocks).map((c) => ({ ...c })),
     }, { backstage: { algotypes: Object.fromEntries(this.state.order.map((id) => [id, this.char(id).algotype])) } });
+    if (this.deckMode) {
+      for (const id of this.state.order) {
+        const d = this.char(id).deck;
+        this.emit('deck.build', { size: d.draw.length, handSize: this.handSize(id), cards: d.draw.map(pubCard) }, { actor: id });
+      }
+    }
   }
 
   char(id) {
@@ -167,6 +189,10 @@ export class Engine {
     // The Latent keeps pouring in, scene by scene
     if (def.kind !== 'prologue' && def.kind !== 'epilogue' && this.rules.ingressionTicksPerScene > 0) {
       this.tick('ingression', this.rules.ingressionTicksPerScene, 'the Latent keeps pouring in');
+    }
+    // Landmarks are where minds pick things up: each entity is offered a card.
+    if (this.deckMode && def.kind === 'landmark' && this.rules.deck.draftAtLandmarks) {
+      for (const id of this.activeCast()) this.offerDraft(id, this.location().name);
     }
     return def;
   }
@@ -217,15 +243,228 @@ export class Engine {
       });
   }
 
+  // ---------------------------------------------------------------- deck (v0.4)
+
+  /** Hand size is the temporal light cone: how many options a mind can hold at once. */
+  handSize(id) {
+    const d = this.rules.deck;
+    return Math.max(d.handMin, Math.min(d.handMax, d.handBase + this.char(id).cone.horizon));
+  }
+
+  /** Edge slots this turn: the rule, minus flaws held (not played) that cost focus. */
+  edgesAllowed(id, held = this.char(id).deck?.hand ?? []) {
+    return Math.max(0, this.rules.deck.edgesPerTurn + heldEffects(held).focus);
+  }
+
+  drawHand(id) {
+    const c = this.char(id);
+    if (!c.deck || c.dissolved) return null;
+    const size = this.handSize(id);
+    const { drawn, reshuffled } = drawUpTo(c.deck, size, this.rng);
+    // The audience demanded a memory: make sure one is in hand.
+    if (this.state.forceMemory && !c.deck.hand.some((k) => k.type === 'memory')) {
+      const fresh = (k) => k.type === 'memory' && c.memories.find((m) => m.id === k.memory)?.invokedInScene !== this.state.scene?.id;
+      const m = [...c.deck.draw, ...c.deck.discard].find(fresh);
+      if (m) { const k = moveCard(c.deck, m.uid, 'hand'); drawn.push(k); }
+    }
+    this.emit('deck.draw', {
+      hand: c.deck.hand.map(pubCard), drawn: drawn.length, handSize: size, edges: this.edgesAllowed(id),
+      draw: c.deck.draw.length, discard: c.deck.discard.length, reshuffled,
+    }, { actor: id });
+    return c.deck.hand;
+  }
+
+  /** End of turn: a compel still held costs stress; the rest of the hand is discarded. */
+  endTurn(id) {
+    const c = this.char(id);
+    if (!c.deck) return null;
+    const regret = c.deck.hand.filter((k) => k.kind === 'compel');
+    const cards = discardHand(c.deck);
+    this.emit('deck.discard', { cards: cards.map((k) => k.uid), regret: regret.map((k) => k.name), draw: c.deck.draw.length, discard: c.deck.discard.length }, { actor: id });
+    if (!c.dissolved) for (const k of regret) this.inflict(id, 'coherence', this.rules.deck.regretStress, { source: `compel: ${k.name}` });
+    return cards;
+  }
+
+  gainCard(id, def, why, zone = 'draw') {
+    const c = this.char(id);
+    if (!c.deck) return null;
+    const card = addCard(c.deck, { ...def, source: def.source ?? why }, zone, this.rng);
+    this.#syncSheet(c, card);
+    this.emit('deck.gain', { card: pubCard(card), why, zone }, { actor: id });
+    return card;
+  }
+
+  /** Deck mode: the sheet summarises the deck. A skill or domain joins the sheet with its first card and leaves with its last. */
+  #syncSheet(c, card) {
+    const entry = (k) => (k.kind === 'move' ? ['skills', k.skill] : k.type === 'domain' ? ['domains', k.domain] : null);
+    const e = entry(card);
+    if (!e) return;
+    const [field, value] = e;
+    const present = cardsInPlay(c.deck).some((k) => entry(k)?.[0] === field && entry(k)[1] === value);
+    const i = c[field].indexOf(value);
+    if (present && i < 0) c[field].push(value);
+    if (!present && i >= 0) c[field].splice(i, 1);
+  }
+
+  removeCard(id, uid, why) {
+    const c = this.char(id);
+    const card = c.deck ? moveCard(c.deck, uid, 'removed') : null;
+    if (!card) return null;
+    // A removed condition or compel is healed, not just hidden.
+    if (card.type === 'condition') { const i = c.conditions.findIndex((x) => x.name === card.name); if (i >= 0) c.conditions.splice(i, 1); }
+    if (card.type === 'compel') { const i = c.compels.indexOf(card.compel); if (i >= 0) c.compels.splice(i, 1); }
+    this.#syncSheet(c, card);
+    this.emit('deck.remove', { card: pubCard(card), why }, { actor: id });
+    return card;
+  }
+
+  /** Offer a draft (landmarks, major beats). Each action resolves one offer; later ones wait their turn. */
+  offerDraft(id, why) {
+    const c = this.char(id);
+    if (!c.deck || c.dissolved) return null;
+    const cards = draftOffer(c, this.location(), this.scenario, this.rng, this.rules.deck.offerSize);
+    const offer = { why, cards };
+    if (c.deck.offer) c.deck.offers.push(offer); else c.deck.offer = offer;
+    this.emit('deck.offer', { why, cards: cards.map(pubCard), queued: c.deck.offer !== offer }, { actor: id });
+    return offer;
+  }
+
+  /**
+   * Your next action answers the offer on the table: a card, or null to walk on. Leaving `draft` out
+   * also walks on (offers never pile up), but it is flagged and logged as unanswered, not as a choice.
+   */
+  resolveDraft(id, choice) {
+    const c = this.char(id);
+    const offer = c.deck?.offer;
+    if (!offer) return null;
+    c.deck.offer = c.deck.offers.shift() ?? null;
+    const ref = String(choice ?? '').trim().toLowerCase();
+    const pick = ref ? offer.cards.find((k) => k.offerId === ref || k.id.toLowerCase() === ref || k.name.toLowerCase() === ref) : null;
+    if (ref && !pick && ref !== 'none' && ref !== 'null' && ref !== 'skip') this.flag('draft', `unknown draft choice "${choice}"; skipped`, id);
+    if (choice === undefined) this.flag('draft', `offer from ${offer.why} left unanswered; it passes`, id);
+    const card = pick ? addCard(c.deck, { ...pick, source: `draft: ${offer.why}` }, 'draw', this.rng) : null;
+    if (card) this.#syncSheet(c, card);
+    const invalid = ref && !pick && !['none', 'null', 'skip'].includes(ref);
+    this.emit('deck.draft', { card: pubCard(card), answer: card ? 'taken' : choice === undefined ? 'unanswered' : invalid ? 'invalid' : 'declined', why: offer.why, offered: offer.cards.map((k) => k.name) }, { actor: id });
+    return card;
+  }
+
+  #gainResolve(id, why) {
+    const c = this.char(id);
+    if (c.deck) this.gainCard(id, resolveCard(), why);
+    else { c.resolve++; this.emit('resolve.gain', { resolve: c.resolve }, { actor: id }); }
+  }
+
+  /**
+   * Resolve the cards an intent plays against the actor's hand. Tolerant: cards may be
+   * named by uid or name, and legacy fields (skill, domain, memory, guard) pull the
+   * matching card from hand when the agent forgot to list it.
+   */
+  #pickCards(c, intent, issues) {
+    const hand = c.deck.hand;
+    const refs = (Array.isArray(intent.play) ? intent.play : intent.play ? [intent.play] : []).map((r) => String(r?.uid ?? r?.id ?? r).trim()).filter(Boolean);
+    const picked = [];
+    for (const ref of refs) {
+      const r = ref.toLowerCase();
+      const card = hand.find((k) => k.uid === r && !picked.includes(k)) ?? hand.find((k) => !picked.includes(k) && (k.name.toLowerCase() === r || k.id.toLowerCase() === r));
+      if (!card) { if (!picked.some((k) => k.uid === r)) issues.push(`card "${ref}" is not in hand`); continue; }
+      picked.push(card);
+    }
+    const has = (f) => picked.some(f);
+    const take = (f) => { const k = hand.find((x) => !picked.includes(x) && f(x)); if (k) picked.push(k); return k; };
+    const skill = SKILLS.find((s) => s.toLowerCase() === String(intent.skill ?? '').toLowerCase());
+    if (skill && !has((k) => k.kind === 'move')) take((k) => k.type === 'knack' && k.skill === skill) ?? take((k) => k.kind === 'move' && k.skill === skill);
+    if (intent.memory?.id && intent.memory.reinterpretation && !has((k) => k.type === 'memory')) take((k) => k.type === 'memory' && k.memory === intent.memory.id);
+    const domain = DOMAINS.find((d) => d.toLowerCase() === String(intent.domain ?? '').toLowerCase());
+    if (domain && !has((k) => k.type === 'domain' && k.domain === domain)) take((k) => k.type === 'domain' && k.domain === domain);
+    if ((intent.guard ?? intent.share_stress_with) && !has((k) => k.kind === 'guard')) take((k) => k.kind === 'guard');
+    return picked;
+  }
+
+  /** Sort picked cards into Move / Edges / Guard / Compel, enforce the limits, and record what stays held. */
+  #applyCards(c, out, picked, issues) {
+    const roll = out.needsRoll && out.kind === 'act';
+    const d = { move: null, edges: [], guard: null, compel: null, improvised: false, dropped: [], ward: 0, extraClue: 0, allowed: 0, held: [] };
+    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk (target ${out.target.type})` : null);
+    const drop = (k, why) => { if (!d.dropped.includes(k.uid)) d.dropped.push(k.uid); if (why) issues.push(why); };
+    const moves = picked.filter((k) => k.kind === 'move');
+    if (roll) {
+      d.move = moves[0] ?? null;
+      d.improvised = !d.move;
+      for (const k of moves.slice(1)) drop(k, `only one Move per action; ${k.name} stays in hand`);
+      if (d.move) { out.skill = d.move.skill; if (d.move.domain) out.domain ??= d.move.domain; }
+    } else for (const k of moves) drop(k, noRoll(k));
+    for (const k of picked.filter((x) => x.kind === 'status')) drop(k, `${k.name} is unplayable`);
+    const guards = picked.filter((k) => k.kind === 'guard');
+    if (out.guard && guards.length) d.guard = guards[0];
+    else if (out.guard) { issues.push(`no Guard card in hand; cannot guard ${out.guard}`); out.guard = null; }
+    for (const k of guards) if (k !== d.guard) drop(k, out.guard ? null : 'a Guard card needs an ally: set "guard"');
+    for (const k of picked.filter((x) => x.kind === 'compel')) {
+      if (roll && !d.compel && out.skill && out.skill === c.deck.lastMove) d.compel = k;
+      else drop(k, `${k.name} discards only alongside your last Move (${c.deck.lastMove ?? 'none yet'})`);
+    }
+    if (out.memory && !picked.some((k) => k.type === 'memory' && k.memory === out.memory.id)) {
+      issues.push(`memory ${out.memory.id} is not in your hand`);
+      out.memory = null;
+    }
+    // Edges: each must fit this action; then the slot limit (held flaws can cost a slot).
+    const valid = [];
+    for (const k of picked.filter((x) => x.kind === 'edge')) {
+      if (k.type === 'memory') {
+        const spentThisScene = c.memories.find((m) => m.id === k.memory)?.invokedInScene === this.state.scene?.id;
+        if (out.memory?.id === k.memory) valid.push(k);
+        else drop(k, out.memory || spentThisScene ? (spentThisScene && !issues.some((i) => i.includes('already invoked')) ? `${k.name} was already invoked this scene` : null) : `${k.name} needs a retelling ("memory": {"reinterpretation": …})`);
+        continue;
+      }
+      if (!roll) { drop(k, noRoll(k)); continue; }
+      if (k.edgeFor?.length && !k.edgeFor.includes(out.skill)) { drop(k, `${k.name} plays only with ${k.edgeFor.join(' or ')}`); continue; }
+      if (k.onlyTargets && !k.onlyTargets.includes(out.target.type)) { drop(k, `${k.name} helps only when the target is ${k.onlyTargets.join(' or ')}`); continue; }
+      valid.push(k);
+    }
+    // A card set down at this action's free rest is gone before the dice: it is not held for this roll.
+    const setDown = out.addRest?.remove ?? null;
+    const allowedFor = (kept) => this.edgesAllowed(c.id, c.deck.hand.filter((k) => !kept.includes(k) && k.uid !== setDown));
+    // A played flaw that costs a slot while held frees that slot, so it is kept first (listing order must not matter).
+    const lifts = (k) => (k.focus ?? 0) < 0 || (k.mutesMemory && valid.some((x) => x.type === 'memory'));
+    valid.sort((a, b) => (lifts(a) ? 0 : 1) - (lifts(b) ? 0 : 1));
+    let kept = valid;
+    if (roll) for (let pass = 0; pass < 2; pass++) { const n = allowedFor(kept); if (kept.length > n) kept = kept.slice(0, n); }
+    for (const k of valid) if (!kept.includes(k)) {
+      drop(k, `edge limit: ${k.name} stays in hand`);
+      if (k.type === 'memory') out.memory = null;
+    }
+    d.edges = kept;
+    d.allowed = allowedFor(kept);
+    d.ward = kept.reduce((s, k) => s + (k.ward ?? 0), 0);
+    d.extraClue = kept.reduce((s, k) => s + (k.extraClue ?? 0), 0);
+    const used = [d.move, ...d.edges, d.guard, d.compel].filter(Boolean);
+    d.held = c.deck.hand.filter((k) => !used.includes(k) && k.uid !== setDown);
+    out.deck = d;
+  }
+
+  #restRemoval(c, ref, rest, picked, issues) {
+    if (!ref || !this.rules.deck.restRemoves) return;
+    const r = String(ref).trim().toLowerCase();
+    const card = cardsInPlay(c.deck).find((k) => k.uid === r) ?? cardsInPlay(c.deck).find((k) => k.name.toLowerCase() === r);
+    if (!card) issues.push(`rest: no card "${ref}" in your deck`);
+    else if (!isRemovable(card)) issues.push(`rest: ${card.name} cannot be removed (${card.innate ? 'it is who you are' : 'memories leave by being spent'})`);
+    else if (picked?.includes(card)) issues.push(`rest: cannot remove ${card.name} while playing it`);
+    else rest.remove = card.uid;
+  }
+
   // ---------------------------------------------------------------- actions
 
   /**
    * Normalise and validate an agent's intent. The engine — not the agent —
    * decides whether a roll is required.
    */
-  validateAction(actorId, intent = {}) {
+  validateAction(actorId, intent = {}, { dry = false } = {}) {
     const c = this.char(actorId);
     const issues = [];
+    // Deck mode: which hand cards does this intent play? A memory card names its memory.
+    const picked = c.deck ? this.#pickCards(c, intent, issues) : null;
+    const memCard = picked?.find((k) => k.type === 'memory');
+    if (memCard && intent.memory && !intent.memory.id) intent = { ...intent, memory: { ...intent.memory, id: memCard.memory } };
     const out = {
       actor: actorId,
       say: truncate(intent.say ?? '', 400),
@@ -244,7 +483,7 @@ export class Engine {
     if (intent.domain && !domain) issues.push(`unknown domain "${intent.domain}"`);
 
     // Target grammar
-    out.target = this.parseTarget(intent.target, actorId, issues);
+    out.target = this.parseTarget(intent.target, actorId, issues, { dry });
 
     // Theorize (Brindlewood)
     if (intent.theorize && intent.theorize.theory) {
@@ -263,9 +502,10 @@ export class Engine {
     // Rest at a haunt: spend an experience to clear stress
     if (out.kind !== 'theorize' && out.target.type === 'haunt') {
       out.kind = 'rest';
-      const memId = intent.memory?.id ?? c.memories[0]?.id;
+      const memId = intent.memory?.id ?? intent.rest?.memory ?? intent.rest?.memory_id ?? c.memories[0]?.id;
       out.rest = { haunt: out.target.id, memory: c.memories.find((m) => m.id === memId) ? memId : c.memories[0]?.id ?? null };
       if (!out.rest.memory) issues.push('no memory left to spend at a haunt');
+      if (c.deck) this.#restRemoval(c, intent.rest?.remove ?? intent.remove, out.rest, picked, issues);
     }
 
     // Memory invocation (+1 die, must reinterpret)
@@ -286,7 +526,10 @@ export class Engine {
       else if (this.state.restedThisScene?.has(actorId)) issues.push('rest: already rested this scene');
       else if (!c.memories.find((m) => m.id === memId)) issues.push(`rest: memory "${memId}" does not exist`);
       else if (out.memory?.id === memId) issues.push('rest: cannot spend the memory you are invoking');
-      else out.addRest = { haunt: h.id, memory: memId };
+      else {
+        out.addRest = { haunt: h.id, memory: memId };
+        if (c.deck) this.#restRemoval(c, intent.rest.remove, out.addRest, picked, issues);
+      }
     }
 
     // Beat being pursued (advisory; the GM proposes hits, the engine validates)
@@ -317,6 +560,8 @@ export class Engine {
     }
     if (out.kind === 'theorize') out.needsRoll = true;
 
+    if (picked) this.#applyCards(c, out, picked, issues);
+
     // Pool & difficulty preview
     if (out.needsRoll && out.kind === 'act') {
       const p = this.#poolFor(actorId, out);
@@ -328,7 +573,7 @@ export class Engine {
     return out;
   }
 
-  parseTarget(raw, actorId, issues = []) {
+  parseTarget(raw, actorId, issues = [], { dry = false } = {}) {
     // Agents sometimes echo the menu text ("ally:ilse2 (Mend Ilse-2)"): keep only the target token.
     const t = (String(raw ?? 'none').trim().match(/^[a-z]+(?::[a-z0-9_-]+)?/i)?.[0] ?? 'none').toLowerCase();
     if (!t || t === 'none') return { type: 'none' };
@@ -337,12 +582,12 @@ export class Engine {
       return { type: 'delve', id: this.state.delveClockId };
     }
     if (t === 'clue' || t === 'clues') return { type: 'clue' };
-    if (t === 'aperture') return this.parseTarget('clock:aperture', actorId, issues);
+    if (t === 'aperture') return this.parseTarget('clock:aperture', actorId, issues, { dry });
     const [kind, id] = t.split(':');
     if (kind === 'clock') {
       const clock = this.state.clocks[id];
       if (!clock || clock.kind === 'delve') { issues.push(`unknown clock "${id}"`); return { type: 'none' }; }
-      if (!this.canSeeClock(actorId, clock)) { issues.push(`clock "${id}" is outside ${actorId}'s light cone`); this.flag('outside_light_cone', `${actorId} targeted ${id}`, actorId); return { type: 'none' }; }
+      if (!this.canSeeClock(actorId, clock)) { issues.push(`clock "${id}" is outside ${actorId}'s light cone`); if (!dry) this.flag('outside_light_cone', `${actorId} targeted ${id}`, actorId); return { type: 'none' }; }
       return { type: 'clock', id };
     }
     if (kind === 'npc') {
@@ -367,10 +612,27 @@ export class Engine {
     const c = this.char(actorId);
     const parts = ['base'];
     let pool = 1;
-    if (action.skill && c.skills.includes(action.skill)) { pool++; parts.push(action.skill); }
-    if (action.domain && c.domains.includes(action.domain) && this.#domainRelevant(action.domain)) { pool++; parts.push(action.domain); }
-    if (c.knack && action.skill === c.knack.skill && action.domain === c.knack.domain && this.rules.maxMastery > 0) { pool++; parts.push('mastery'); }
-    if (action.memory) { pool += this.rules.memoryInvokeBonus; parts.push(`memory:${action.memory.id}`); }
+    const d = action.deck;
+    if (d) {
+      // Deck mode: competence is the cards you play, not the sheet.
+      if (d.move) {
+        pool++; parts.push(d.move.skill);
+        if (d.move.type === 'knack' && this.rules.maxMastery > 0) { pool++; parts.push('mastery'); }
+      } else parts.push(`improvise${action.skill ? `:${action.skill}` : ''}`);
+      const muted = heldEffects(d.held).mutesMemory;
+      for (const k of d.edges) {
+        if (k.type === 'domain') { if (this.#domainRelevant(k.domain)) { pool++; parts.push(k.domain); } else parts.push(`${k.domain}:not here`); }
+        else if (k.type === 'memory') { if (muted) parts.push(`memory:${k.memory}:muted`); else { pool += this.rules.memoryInvokeBonus; parts.push(`memory:${k.memory}`); } }
+        else if (k.bonus) { pool += k.bonus; parts.push(k.type === 'drive' ? 'drive' : k.name); }
+        else if (k.ward) parts.push(`${k.name}:ward ${k.ward}`);
+      }
+      for (const k of d.held) if (action.skill && k.penalty?.includes(action.skill)) { pool--; parts.push(`-${k.name}`); }
+    } else {
+      if (action.skill && c.skills.includes(action.skill)) { pool++; parts.push(action.skill); }
+      if (action.domain && c.domains.includes(action.domain) && this.#domainRelevant(action.domain)) { pool++; parts.push(action.domain); }
+      if (c.knack && action.skill === c.knack.skill && action.domain === c.knack.domain && this.rules.maxMastery > 0) { pool++; parts.push('mastery'); }
+      if (action.memory) { pool += this.rules.memoryInvokeBonus; parts.push(`memory:${action.memory.id}`); }
+    }
     if (c.resolve > 0) { /* resolve is spent automatically on desperate rolls */ }
     let difficulty = this.rules.difficultyByTier[this.tier()] ?? 'standard';
     if (action.target.type === 'npc') {
@@ -378,7 +640,7 @@ export class Engine {
       if (action.skill && npc.persuadedBy.includes(action.skill)) { pool += this.rules.persuadabilityMatchBonus; parts.push('persuadable'); }
       if (action.skill && npc.resists.includes(action.skill)) { difficulty = stepDifficulty(difficulty, this.rules.persuadabilityMismatchStep); parts.push('mismatch'); }
     }
-    for (const cond of c.conditions) if (action.skill && cond.penalty.includes(action.skill)) { pool--; parts.push(`-${cond.name}`); }
+    if (!d) for (const cond of c.conditions) if (action.skill && cond.penalty.includes(action.skill)) { pool--; parts.push(`-${cond.name}`); }
     const bonus = this.state.pendingBonus?.[actorId] ?? 0;
     if (bonus) { pool += bonus; parts.push('gift'); }
     return { pool: Math.max(0, pool), parts, difficulty };
@@ -392,17 +654,26 @@ export class Engine {
   }
 
   declare(actorId, intent) {
-    const action = this.validateAction(actorId, intent);
     const c = this.char(actorId);
-    if (action.memory) {
+    if (c.deck?.offer) this.resolveDraft(actorId, intent.draft);
+    const action = this.validateAction(actorId, intent);
+    const invoke = () => {
+      if (!action.memory) return;
       const m = c.memories.find((mm) => mm.id === action.memory.id);
       const before = m.experiences.join(' ');
       m.invokedInScene = this.state.scene?.id;
       m.versions.push({ scene: this.state.scene?.id, text: action.memory.reinterpretation });
       const drift = 1 - jaccard(m.original, action.memory.reinterpretation);
       this.emit('memory.invoke', { memory: m.id, before, reinterpretation: action.memory.reinterpretation, original: m.original, drift: +drift.toFixed(3) }, { actor: actorId });
+    };
+    if (action.deck) {
+      for (const issue of action.issues) this.flag('intent', issue, actorId);
+      this.#playCards(actorId, action);
+      invoke();
+    } else {
+      invoke();
+      for (const issue of action.issues) this.flag('intent', issue, actorId);
     }
-    for (const issue of action.issues) this.flag('intent', issue, actorId);
     if (action.addRest) {
       this.state.restedThisScene?.add(actorId);
       this.rest({ actor: actorId, rest: action.addRest });
@@ -417,6 +688,46 @@ export class Engine {
       difficulty: action.difficulty, theorize: action.theorize, guard: action.guard, rest: action.rest,
     }, { actor: actorId, backstage: { intent: action.intent, beat: action.beat } });
     return action;
+  }
+
+  /** Move played cards out of the hand and apply their on-play effects. */
+  #playCards(id, action) {
+    const c = this.char(id);
+    const d = action.deck;
+    const used = [d.move, ...d.edges, d.guard, d.compel].filter(Boolean);
+    for (const k of used) moveCard(c.deck, k.uid, k.exhaust ? 'exhaust' : 'discard');
+    const roll = action.needsRoll && action.kind === 'act';
+    if (roll) c.deck.lastMove = action.skill ?? null;
+    if (used.length || (roll && d.improvised)) {
+      this.emit('deck.play', {
+        move: pubCard(d.move), edges: d.edges.map(pubCard), guard: pubCard(d.guard), compel: pubCard(d.compel),
+        improvised: roll && d.improvised ? action.skill ?? 'base die' : null, dropped: d.dropped,
+        hand: c.deck.hand.map((k) => k.uid),
+      }, { actor: id });
+    }
+    for (const k of d.edges) {
+      if (k.type === 'drive') {
+        c.deck.drivePlays++;
+        if (c.deck.drivePlays >= this.rules.deck.driveRevealAt && !c.algotypeRevealed) {
+          c.algotypeRevealed = true;
+          this.emit('algotype.reveal', { algotype: c.algotype.label, disposition: c.algotype.disposition, via: 'drive' }, { actor: id });
+        }
+      }
+      if (k.stress) this.inflict(id, k.stress.resistance, k.stress.amount, { source: k.name });
+      if (k.tick) this.tick(k.tick.clock, k.tick.by, `${c.name} plays ${k.name}`);
+    }
+  }
+
+  /** Side-effect-free validation, for interfaces that show the pool before you commit. */
+  previewAction(actorId, intent = {}) {
+    const a = this.validateAction(actorId, intent, { dry: true });
+    const d = a.deck;
+    return {
+      kind: a.kind, needsRoll: a.needsRoll, target: a.target, skill: a.skill, domain: a.domain,
+      pool: a.pool, poolParts: a.poolParts ?? [], difficulty: a.difficulty, issues: a.issues,
+      memory: a.memory?.id ?? null, guard: a.guard, rest: a.rest ?? a.addRest ?? null,
+      deck: d ? { move: d.move?.uid ?? null, edges: d.edges.map((k) => k.uid), guard: d.guard?.uid ?? null, compel: d.compel?.uid ?? null, improvised: d.improvised, dropped: d.dropped, allowed: d.allowed } : null,
+    };
   }
 
   /** Validate the GM's declared stakes. Corrects illegal or too-lenient values and logs a flag. */
@@ -483,6 +794,7 @@ export class Engine {
     if (branch === 'fail' || branch === 'cost') {
       let amount = this.rng.die(stakes.die);
       if (roll.band === 'critFail') amount *= this.rules.critFailStressMultiplier;
+      if (action.deck?.ward) amount = Math.max(0, amount - action.deck.ward);
       out.stress.push(...this.inflict(action.actor, stakes.resistance, amount, { die: stakes.die }));
     }
     // --- outgoing effect
@@ -495,7 +807,7 @@ export class Engine {
         const n = this.rng.die(d);
         this.tick(t.id, n, `${action.actor} pushes through (d${d}=${n})`);
       } else if (t.type === 'clue') {
-        const n = crit ? 2 : 1;
+        const n = (crit ? 2 : 1) + (action.deck?.extraClue ?? 0);
         out.clues = this.#nextClueSeeds(n);
       } else if (t.type === 'clock') {
         const clock = this.state.clocks[t.id];
@@ -602,11 +914,12 @@ export class Engine {
     if (f.severity === 'major') c.majors++;
     const followUp = [];
     const eff = opt.effect ?? { type: 'none' };
+    let lostDomain = null;
     switch (eff.type) {
       case 'condition': c.conditions.push({ name: opt.name, penalty: eff.penalty }); break;
       case 'compel': c.compels.push(eff.text); break;
       case 'protection': c.protection[eff.resistance] = Math.max(0, c.protection[eff.resistance] + eff.delta); break;
-      case 'lose_domain': if (c.domains.length) { const lost = c.domains.pop(); followUp.push({ type: 'lost_domain', domain: lost }); } break;
+      case 'lose_domain': if (c.domains.length) { lostDomain = c.domains.pop(); followUp.push({ type: 'lost_domain', domain: lostDomain }); } break;
       case 'gain_domain': if (!c.domains.includes(eff.domain)) c.domains.push(eff.domain); if (eff.tick) this.tick(eff.tick.clock, eff.tick.by, 'bleed-through'); break;
       case 'memory_rewrite': if (c.memories.length) followUp.push({ type: 'memory_rewrite', actor: c.id }); break;
       case 'memory_lose': if (c.memories.length) followUp.push({ type: 'memory_lose', actor: c.id }); break;
@@ -621,6 +934,16 @@ export class Engine {
       default: break;
     }
     this.emit('fallout', { severity: f.severity, resistance: f.resistance, id: opt.id, name: opt.name, text: opt.text, narration: truncate(narration, 500), effect: eff, majors: c.majors }, { actor: c.id });
+    if (c.deck) {
+      // What happens to you becomes part of the deck you draw from.
+      const why = `fallout: ${opt.name}`;
+      if (eff.type === 'condition') this.gainCard(c.id, conditionCard(opt), why);
+      if (eff.type === 'compel') this.gainCard(c.id, compelCard(opt), why);
+      if (eff.type === 'gain_domain') this.gainCard(c.id, domainCard(eff.domain, { lent: true }), why);
+      if (eff.type === 'fork') this.gainCard(c.id, voiceCard(), why);
+      if (eff.type === 'ingressed') this.gainCard(c.id, domainCard('Threshold', { lent: true }), why);
+      if (lostDomain) for (const k of cardsInPlay(c.deck).filter((x) => x.type === 'domain' && x.domain === lostDomain)) this.removeCard(c.id, k.uid, why);
+    }
     if (c.majors >= this.rules.majorsToDissolve && !c.dissolved) {
       c.dissolved = true;
       this.emit('character.dissolve', { text: `${c.name} returns to the Latent.` }, { actor: c.id });
@@ -740,6 +1063,7 @@ export class Engine {
     if (idx < 0) return null;
     const [m] = c.memories.splice(idx, 1);
     this.emit('memory.lose', { memory: m.id, text: m.experiences.join(' '), original: m.original, left: c.memories.length }, { actor: actorId });
+    if (c.deck && this.#removeMemoryCard(actorId, m.id, 'erased')) this.gainCard(actorId, gapCard(m.id), 'the shape of the gap');
     return m;
   }
 
@@ -751,6 +1075,7 @@ export class Engine {
       const m = { id: `m${c.nextMemoryId++}`, experiences: [t], original: t, versions: [], invokedInScene: null };
       c.memories.push(m);
       this.emit('memory.form', { memory: m.id, text: t, slots: c.memories.length }, { actor: actorId });
+      if (c.deck) this.gainCard(actorId, memoryCard(m.id), 'a new memory', 'discard');
       return m;
     }
     const host = c.memories.find((m) => m.experiences.length < this.rules.experiencesPerMemory);
@@ -761,6 +1086,7 @@ export class Engine {
     }
     // Full: oldest memory moves to a fragile backup, or is forgotten
     const oldest = c.memories.shift();
+    if (c.deck) this.#removeMemoryCard(actorId, oldest.id, 'no room to hold it');
     if (c.backups.length < this.rules.backupSlots) {
       c.backups.push(oldest);
       this.emit('memory.backup', { memory: oldest.id, text: oldest.experiences.join(' ') }, { actor: actorId });
@@ -780,9 +1106,20 @@ export class Engine {
     if (!m.experiences.length) c.memories.splice(c.memories.indexOf(m), 1);
     const amount = Math.min(c.stress[h.resistance], this.rng.die(h.die));
     c.stress[h.resistance] -= amount;
-    if (this.rules.restGrantsResolve) c.resolve += this.rules.restGrantsResolve;
+    if (this.rules.restGrantsResolve && !c.deck) c.resolve += this.rules.restGrantsResolve;
     const ev = this.emit('haunt.rest', { haunt: h.id, name: h.name, resistance: h.resistance, die: h.die, cleared: amount, spent, memory: m.id, memoryGone: !m.experiences.length, total: this.totalStress(c.id), resolve: c.resolve }, { actor: c.id });
+    if (c.deck) {
+      // A haunt is a campfire: what you spent, what you set down, what you take with you.
+      if (!m.experiences.length) this.#removeMemoryCard(c.id, m.id, `spent at ${h.name}`);
+      if (action.rest.remove) this.removeCard(c.id, action.rest.remove, `set down at ${h.name}`);
+      for (let i = 0; i < (this.rules.restGrantsResolve ?? 0); i++) this.gainCard(c.id, resolveCard(), `rest at ${h.name}`);
+    }
     return ev.data;
+  }
+
+  #removeMemoryCard(id, memId, why) {
+    const k = cardsInPlay(this.char(id).deck).find((x) => x.type === 'memory' && x.memory === memId);
+    return k ? this.removeCard(id, k.uid, why) : null;
   }
 
   // ---------------------------------------------------------------- theorize
@@ -804,8 +1141,11 @@ export class Engine {
       this.state.theory = { text: action.theorize.theory, actor: action.actor, accepted };
       this.addFacts([`CANON — what is ingressing: ${action.theorize.theory}`], 'theory');
       if (result === 'great') {
-        this.state.pendingBonus = this.state.pendingBonus ?? {};
-        for (const id of this.activeCast()) this.state.pendingBonus[id] = (this.state.pendingBonus[id] ?? 0) + 1;
+        if (this.deckMode) for (const id of this.activeCast()) this.gainCard(id, insightCard(), 'a theory that proved true', 'top');
+        else {
+          this.state.pendingBonus = this.state.pendingBonus ?? {};
+          for (const id of this.activeCast()) this.state.pendingBonus[id] = (this.state.pendingBonus[id] ?? 0) + 1;
+        }
       }
     } else {
       this.inflict(action.actor, 'coherence', this.rng.die(t.failStressDie), { die: t.failStressDie, source: 'wrong theory' });
@@ -838,8 +1178,11 @@ export class Engine {
     const beat = CALLINGS[c.calling].beats.find((b) => b.id === beatId);
     c.beats.hit.push(beatId);
     this.emit('beat.hit', { beat: beatId, tier: beat.tier, text: beat.text, why: truncate(why, 200) }, { actor: actorId });
-    if (beat.tier === 'minor') { c.resolve++; this.emit('resolve.gain', { resolve: c.resolve }, { actor: actorId }); }
-    if (beat.tier === 'major') this.changeCone(actorId, beatId === 'kinship.cone' ? { reach: 1 } : { horizon: 1 }, `major beat: ${beat.text}`);
+    if (beat.tier === 'minor') this.#gainResolve(actorId, `beat: ${beat.text}`);
+    if (beat.tier === 'major') {
+      this.changeCone(actorId, beatId === 'kinship.cone' ? { reach: 1 } : { horizon: 1 }, `major beat: ${beat.text}`);
+      if (c.deck && this.rules.deck.draftOnMajorBeat) this.offerDraft(actorId, `major beat: ${beat.text}`);
+    }
     return true;
   }
 
@@ -854,8 +1197,11 @@ export class Engine {
     this.state.audienceUsed[sid] = used + 1;
     this.emit('audience.ingress', { option: opt.id, label: opt.label, text: opt.text, spotlight: spotlightId });
     if (opt.effect.type === 'gift' && spotlightId) {
-      this.state.pendingBonus = this.state.pendingBonus ?? {};
-      this.state.pendingBonus[spotlightId] = (this.state.pendingBonus[spotlightId] ?? 0) + 1;
+      if (this.deckMode) this.gainCard(spotlightId, giftCard(), 'an audience gift', 'top');
+      else {
+        this.state.pendingBonus = this.state.pendingBonus ?? {};
+        this.state.pendingBonus[spotlightId] = (this.state.pendingBonus[spotlightId] ?? 0) + 1;
+      }
       this.tick('ingression', 1, 'an audience gift');
     }
     if (opt.effect.type === 'tick') this.tick(opt.effect.clock, opt.effect.by, 'the audience pulls');
@@ -890,6 +1236,34 @@ export class Engine {
       dissolved: c.dissolved, forked: c.forked,
       guardedBy: this.state.guards[id] ?? null,
       algotype: c.algotypeRevealed ? c.algotype.label : null,
+      ...(c.deck ? { deck: { hand: c.deck.hand.length, draw: c.deck.draw.length, discard: c.deck.discard.length, size: cardsInPlay(c.deck).length, handSize: this.handSize(id) } } : {}),
+    };
+  }
+
+  /** A player's own deck: the hand in full, the rest as counts, and every card for "view deck". */
+  deckView(id) {
+    const c = this.char(id);
+    if (!c.deck) return null;
+    const card = (k) => {
+      const v = pubCard(k);
+      if (k.type === 'memory') v.memoryText = c.memories.find((m) => m.id === k.memory)?.experiences.join(' ') ?? '';
+      if (k.type === 'memory') v.invokedThisScene = c.memories.find((m) => m.id === k.memory)?.invokedInScene === this.state.scene?.id;
+      if (k.type === 'drive') v.disposition = c.algotype.disposition;
+      if (k.type === 'domain') v.here = this.#domainRelevant(k.domain);
+      v.playable = k.kind !== 'status';
+      v.removable = isRemovable(k);
+      return v;
+    };
+    const zone = (z) => c.deck[z].map((k) => ({ uid: k.uid, name: k.name, type: k.type, kind: k.kind, zone: z, removable: isRemovable(k) }));
+    return {
+      hand: c.deck.hand.map(card),
+      handSize: this.handSize(id),
+      edgesAllowed: this.edgesAllowed(id),
+      drawPile: c.deck.draw.length, discardPile: c.deck.discard.length, exhausted: c.deck.exhaust.length, removed: c.deck.removed.length,
+      cards: [...zone('hand'), ...zone('draw'), ...zone('discard')],
+      offer: c.deck.offer ? { why: c.deck.offer.why, cards: c.deck.offer.cards.map(pubCard), queued: c.deck.offers.length } : null,
+      lastMove: c.deck.lastMove,
+      drivePlays: c.deck.drivePlays, driveRevealAt: this.rules.deck.driveRevealAt,
     };
   }
 
@@ -907,7 +1281,9 @@ export class Engine {
         backups: c.backups.map((m) => ({ id: m.id, text: m.experiences.join(' ') })),
         beats: c.beats.declared.map((bid) => ({ ...CALLINGS[c.calling].beats.find((b) => b.id === bid), hit: c.beats.hit.includes(bid) })),
         compels: c.compels,
+        restedThisScene: !!this.state.restedThisScene?.has(id),
         disposition: c.algotype.disposition, // hidden drive, phrased as disposition
+        ...(c.deck ? { deck: this.deckView(id), flaw: c.flaw } : {}),
       },
       allies: this.activeCast().filter((x) => x !== id).map((x) => this.publicSheet(x)),
       scene: this.state.scene ? { id: this.state.scene.id, kind: this.state.scene.kind, title: this.state.scene.title } : null,
@@ -1003,6 +1379,13 @@ export function describeEvent(e, names = null) {
     case 'algotype.reveal': return `${n(e.actor)}'s hidden drive shows: ${d.algotype}`;
     case 'character.dissolve': return d.text;
     case 'ending': return `Ending: ${d.text}`;
+    case 'deck.play': {
+      const names_ = [d.move?.name ?? (d.improvised ? `improvised ${d.improvised}` : null), ...(d.edges ?? []).map((k) => k.name), d.guard?.name, d.compel?.name].filter(Boolean);
+      return names_.length ? `${n(e.actor)} plays ${names_.join(' + ')}` : null;
+    }
+    case 'deck.gain': return `${n(e.actor)} gains a card: ${d.card.name} (${d.why})`;
+    case 'deck.remove': return `${n(e.actor)} loses a card: ${d.card.name} (${d.why})`;
+    case 'deck.draft': return d.card ? `${n(e.actor)} drafts ${d.card.name}` : `${n(e.actor)} takes nothing from ${d.why}`;
     default: return null;
   }
 }

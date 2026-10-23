@@ -1,5 +1,10 @@
 [
   {
+    "file": "sessions/fourth-light.json",
+    "title": "Fourth light · v0.4, the deck",
+    "note": "Same cast and models, now on v0.4 (v0.3's fixes plus the deck): Sonnet GM and three Haiku players on the file bridge. Every draft was taken, flaws were played as strengths 5 times and Drive cards 8 (Ilse-2's third revealed her drive). Against third light (v0.2): fallouts fell from 19 to 9, beats rose from 2/6 to 4/6, and no choice went dead. Watch the hand strip under the stage. Weak spot: no clues found, so the theory failed and the Aperture closed."
+  },
+  {
     "file": "sessions/third-light.json",
     "title": "Third light · v0.2 rules",
     "note": "Same cast and models on v0.2 (guard, harder desperate, legible persuadability). Agency 100%, desperate success 29%, 19 guards. Overcorrected: 19 fallouts in 24 rolls, because a shared hit rolled fallout twice. Fixed in v0.3."

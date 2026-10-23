@@ -75,7 +75,9 @@ export function gmAdjudicatePrompt(view, action, actorSheet, extra = {}) {
     view.secretsToReveal.length ? `SECRETS UNLOCKED (may reveal): ${j(view.secretsToReveal)}` : '',
     `RECENT: ${j(view.recent.slice(-10))}`,
     `ACTOR: ${j({ id: actorSheet.id, name: actorSheet.name, pitch: actorSheet.pitch, stress: actorSheet.stress, beats: actorSheet.beats, compels: actorSheet.compels })}`,
-    `ACTION (validated by engine): ${j({ say: action.say, do: action.do, target: action.target, skill: action.skill, domain: action.domain, kind: action.kind, needsRoll: action.needsRoll, pool: action.pool, difficulty: action.difficulty, memory: action.memory, theorize: action.theorize })}`,
+    `ACTION (validated by engine): ${j({ say: action.say, do: action.do, target: action.target, skill: action.skill, domain: action.domain, kind: action.kind, needsRoll: action.needsRoll, pool: action.pool, difficulty: action.difficulty, memory: action.memory, theorize: action.theorize, ...(action.deck ? { cards_played: playedNames(action.deck) } : {}) })}`,
+    action.deck?.edges.some((k) => k.type === 'drive') ? 'The actor played their DRIVE card: the act expresses a hidden inclination you cannot see. Let the narration notice the lean without naming it.' : '',
+    action.deck?.edges.some((k) => k.type === 'flaw') ? `The actor turned their own flaw into strength (${action.deck.edges.find((k) => k.type === 'flaw').name}). Show the flaw in the act.` : '',
     extra.clueSeeds?.length ? `IF SUCCESSFUL THIS REVEALS CLUE SEED(S): ${j(extra.clueSeeds)} — write "clue_text" as your vivid wording of the first seed (keep its meaning).` : '',
     extra.complicationHint ? `PENDING COMPLICATION to weave into the fail branch: ${extra.complicationHint}` : '',
   ];
@@ -98,6 +100,10 @@ export function gmAdjudicatePrompt(view, action, actorSheet, extra = {}) {
     );
   }
   return lines.filter(Boolean).join('\n');
+}
+
+function playedNames(d) {
+  return [d.move ? `${d.move.name} (move)` : d.improvised ? 'improvised (no move card)' : null, ...d.edges.map((k) => k.name), d.guard?.name, d.compel?.name].filter(Boolean);
 }
 
 export function gmFalloutPrompt(view, f, options, actorSheet) {
@@ -160,21 +166,47 @@ export function playerIntroPrompt(view, callingDef) {
   ].join('\n');
 }
 
-export function playerActPrompt(view) {
-  // Targets are given as {target, what} pairs so agents copy the bare token (the
-  // first LLM session echoed whole menu lines like "delve (push through…)").
+/**
+ * What an entity can act on this turn, as {target, what} pairs. Shared by LLM, human and
+ * terminal seats. Bare tokens, because the first LLM session echoed whole menu lines
+ * like "delve (push through…)" into its target.
+ */
+export function targetMenu(view) {
   const targets = [{ target: 'none', what: 'just talk / flavour; changes nothing mechanically' }];
   if (view.scene?.kind === 'delve') targets.push({ target: 'delve', what: 'push through the journey (Navigate fits)' });
   if (view.location?.isDelve === false) targets.push({ target: 'clue', what: 'search/read this place for clues (Discern fits); clues are needed to theorize' });
   for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).` });
   for (const c of view.clocks) if (c.kind !== 'delve') targets.push({ target: `clock:${c.id}`, what: `${c.name} ${c.value}/${c.size}${c.kind === 'progress' ? ' — fill it' : ' — push it back'}` });
   for (const a of view.allies) targets.push({ target: `ally:${a.id}`, what: `Mend ${a.name}` });
-  for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress and gain 1 Resolve` });
+  for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress and gain 1 Resolve${view.you.deck ? '; you may also remove one card from your deck' : ''}` });
+  return targets;
+}
+
+/** A hand as the LLM sees it: ids to copy, plus what each card does right now. */
+export function handForPrompt(deck) {
+  return deck.hand.map((k) => {
+    const o = { id: k.uid, name: k.name, kind: k.kind, text: k.text };
+    if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; if (deck.hand.some((x) => x.mutesMemory && x !== k)) o.note = `worth +0 while you hold your flaw (playing ${deck.hand.find((x) => x.mutesMemory).name} with ${deck.hand.find((x) => x.mutesMemory).edgeFor?.join(' or ') || 'its Move'} lifts it)`; }
+    if (k.type === 'drive') o.inclination = k.disposition;
+    if (k.type === 'domain') o.here = k.here ? 'yes: +1 die here' : 'no: +0 here';
+    // Conditions as fields, not prose: fourth light's misplays were all conditional cards.
+    if (k.onlyTargets) o.only_if_target = k.onlyTargets.join(' or ');
+    if (k.edgeFor) o.only_with_move = k.edgeFor.join(' or ');
+    if (k.kind === 'compel') o.discard_only_with_move = deck.lastMove ?? 'none yet: keep it, it costs 1 Coherence';
+    return o;
+  });
+}
+
+export function playerActPrompt(view) {
+  const targets = targetMenu(view);
+  const deck = view.you.deck;
   const theorizeOk = !view.theory && view.clues.length >= 2;
   return [
     `SCENE: ${j(view.scene)}  LOCATION: ${j({ name: view.location?.name, tier: view.location?.tier, description: view.location?.description, domains: view.location?.domains })}`,
-    `YOU: ${j({ stress: view.you.stress, protection: view.you.protection, skills: view.you.skills, domains: view.you.domains, knack: view.you.knack, cone: view.you.cone, resolve: view.you.resolve, conditions: view.you.conditions, compels: view.you.compels })}`,
-    `YOUR MEMORIES (invoke one for +1 die, but you must reinterpret it — retell it with a new emphasis): ${j(view.you.memories)}`,
+    `YOU: ${j({ stress: view.you.stress, protection: view.you.protection, skills: view.you.skills, domains: view.you.domains, knack: view.you.knack, cone: view.you.cone, ...(deck ? {} : { resolve: view.you.resolve }), conditions: view.you.conditions, compels: view.you.compels })}`,
+    deck
+      ? `YOUR MEMORIES (only one whose card is in your hand can be invoked this turn): ${j(view.you.memories)}`
+      : `YOUR MEMORIES (invoke one for +1 die, but you must reinterpret it — retell it with a new emphasis): ${j(view.you.memories)}`,
     `YOUR BEATS: ${j(view.you.beats)}`,
     `ALLIES: ${j(view.allies.map((a) => ({ id: a.id, name: a.name, total_stress: a.total, fallouts: a.fallouts })))}`,
     `WHAT YOU CAN PERCEIVE (your light cone, reach ${view.reach}): ${j(view.clocks)}`,
@@ -182,16 +214,33 @@ export function playerActPrompt(view) {
     view.theory ? `CANON THEORY: ${view.theory}` : '',
     `FACTS: ${j(view.facts)}`,
     `RECENT (as far back as your horizon lets you hold): ${j(view.recent)}`,
-    (view.location?.isDelve === false && view.location?.haunts?.length)
-      ? `FREE THIS TURN (once per scene, does not use your action): "rest": {"haunt": id, "memory": memory id} — spend one memory at a haunt to clear stress and gain 1 Resolve. Haunts here: ${j(view.location.haunts.map((h) => ({ id: h.id, name: h.name, clears: `${h.resistance} up to d${h.die}` })))}`
+    (view.location?.isDelve === false && view.location?.haunts?.length && !view.you.restedThisScene)
+      ? `FREE THIS TURN (once per scene, does not use your action): "rest": {"haunt": id, "memory": memory id${deck ? ', "remove": card id or null' : ''}} — spend one memory at a haunt to clear stress and gain 1 Resolve${deck ? ', and you may remove one card (a condition, a gap, a dead card) from your deck' : ''}. Haunts here: ${j(view.location.haunts.map((h) => ({ id: h.id, name: h.name, clears: `${h.resistance} up to d${h.die}` })))}`
       : '',
-    'RULES YOU CAN USE: Resolve is spent automatically for +1 die on desperate rolls. Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
+    deck ? deckRules(view) : 'RULES YOU CAN USE: Resolve is spent automatically for +1 die on desperate rolls. Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
     `SKILLS: ${j(SKILL_INFO)}`,
-    `DOMAINS: ${j(DOMAIN_INFO)}`,
+    deck ? '' : `DOMAINS: ${j(DOMAIN_INFO)}`,
     `TARGETS AVAILABLE (put ONLY the bare "target" value in your reply, e.g. "delve" or "npc:clerk"): ${j(targets)}`,
     theorizeOk ? 'You may THEORIZE instead: propose what is ingressing and list the clue ids your theory accounts for. More clues = better odds. A wrong theory hurts.' : '',
     view.forceMemory ? 'THE AUDIENCE DEMANDS: you must invoke and reinterpret a memory this turn.' : '',
-    'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "guard": ally id — until your next turn you take half of any stress that ally suffers (builds cohesion; together the party perceives more) — or null, "theorize": {"theory": string, "clues": [ids]} or null, "rest": {"haunt": id, "memory": memory id} or null}',
+    deck
+      ? 'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "play": [card ids from YOUR HAND: at most one Move, plus Edges, Guard, Compel], "skill": skill name ONLY if you improvise (no Move card), else null, "memory": {"reinterpretation": "the memory retold with a new emphasis"} if you play a Memory card, else null, "guard": ally id if you play a Guard card, else null, "beat": beat id you are pursuing or null, "theorize": {"theory": string, "clues": [ids]} or null, "rest": {"haunt": id, "memory": memory id, "remove": card id or null} or null' + (deck.offer ? ', "draft": offer id ("o1"…) or null' : '') + '}'
+      : 'Return JSON: {"intent": "private: what you are really after", "say": "in-character line (<=25 words) or empty", "do": "what you attempt (<=25 words) or empty", "target": one bare target value from the list, "skill": skill or null, "domain": domain or null, "memory": {"id": memory id, "reinterpretation": "retold memory"} or null, "beat": beat id you are pursuing or null, "guard": ally id — until your next turn you take half of any stress that ally suffers (builds cohesion; together the party perceives more) — or null, "theorize": {"theory": string, "clues": [ids]} or null, "rest": {"haunt": id, "memory": memory id} or null}',
+  ].filter(Boolean).join('\n');
+}
+
+function deckRules(view) {
+  const d = view.you.deck;
+  return [
+    `YOUR HAND (${d.hand.length} cards; your hand size grows with your Horizon): ${j(handForPrompt(d))}`,
+    `YOUR DECK: ${d.drawPile} to draw, ${d.discardPile} discarded. Your deck is who you are: skills, domains, memories, your flaw, your drive, and what has happened to you.`,
+    `HOW CARDS PLAY: list card ids in "play". At most ONE Move (it sets your skill: +1 die, a knack +2, on ANY target; how it fits is yours to narrate). Up to ${d.edgesAllowed} Edge(s)${d.hand.some((k) => (k.focus ?? 0) < 0) ? ` (${d.edgesAllowed - Math.min(...d.hand.map((k) => k.focus ?? 0))} if you play ${d.hand.find((k) => (k.focus ?? 0) < 0).name}: played, it stops costing you the slot)` : ''} add dice: a domain only where the place has it, a Memory only with a retelling, your Drive only if the act leans the way you lean, your flaw only with the Moves it names. Guard and Compel cards are free. Status cards cannot be played; they hurt while held. No Move card that fits? Play any Move anyway (narrate how), or improvise: set "skill", base die only. Whatever you do not play is discarded at the end of your turn.`,
+    d.lastMove && d.hand.some((k) => k.kind === 'compel') ? `Your last Move was ${d.lastMove}: play your Compel card with a ${d.lastMove} Move to discard it, or it costs 1 Coherence at the end of your turn.` : '',
+    (view.location?.isDelve === false && view.location?.haunts?.length && d.cards.some((k) => k.removable))
+      ? `CARDS YOU COULD SET DOWN AT A HAUNT ("remove"): ${j(d.cards.filter((k) => k.removable).map((k) => ({ id: k.uid, name: k.name, type: k.type })))}`
+      : '',
+    d.offer ? `REWARD (${d.offer.why}): choose ONE card to add to your deck, or null: ${j(d.offer.cards.map((k) => ({ id: k.offerId, name: k.name, kind: k.kind, text: k.text })))}${d.offer.queued ? ` (${d.offer.queued} more reward(s) wait for your next turns)` : ''}` : '',
+    'OTHER RULES: Desperate positions drop one more die but pay one effect step more. Guarding an ally builds cohesion; at cohesion 3 the party shares its light cone.',
   ].filter(Boolean).join('\n');
 }
 

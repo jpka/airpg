@@ -19,6 +19,12 @@ const CHOICES = {
   'choice.persuade': 'Acting on entities (persuadability axis)',
   'choice.clue': 'Searching for clues',
 };
+// v0.4: only sessions whose entities hold a deck are judged on these (older sessions keep exactly CHOICES).
+const DECK_CHOICES = {
+  'deck.draft': 'Drafting a card (take what a landmark or beat offers)',
+  'card.drive': 'Playing your Drive card',
+  'card.flaw': 'Playing your flaw as a strength',
+};
 const CONSEQUENCES = {
   'stress.share': 'Stress actually shared',
   'npc.moved': 'An entity persuaded',
@@ -29,7 +35,7 @@ const CONSEQUENCES = {
   'secret.unlock': 'Phase-gated secrets',
   'audience.ingress': 'Audience ingress',
 };
-const MECHANICS = { ...CHOICES, ...CONSEQUENCES };
+const MECHANICS = { ...CHOICES, ...DECK_CHOICES, ...CONSEQUENCES }; // labels only; which are choices depends on the session
 
 export function reviewSession(session, opts = {}) {
   const ev = session.events;
@@ -111,9 +117,10 @@ export function reviewSession(session, opts = {}) {
   const flagCounts = {};
   for (const f of flags) flagCounts[f.data.kind] = (flagCounts[f.data.kind] ?? 0) + 1;
   const calls = by('agent.call');
-  const llmCalls = calls.filter((c) => !c.data.mock);
-  const fallbacks = calls.filter((c) => c.data.fallback).length;
-  const retries = calls.filter((c) => c.data.attempts > 1).length;
+  const llmCalls = calls.filter((c) => !c.data.mock && !c.data.human);
+  const fallbacks = calls.filter((c) => c.data.fallback && !c.data.human).length;
+  const retries = calls.filter((c) => c.data.attempts > 1 && !c.data.human).length;
+  const humanSeats = [...new Set(calls.filter((c) => c.data.human).map((c) => c.data.agent ?? c.actor))];
   const avgMs = llmCalls.length ? llmCalls.reduce((s, c) => s + c.data.ms, 0) / llmCalls.length : 0;
 
   // ---------- narration quality
@@ -125,13 +132,22 @@ export function reviewSession(session, opts = {}) {
   for (const e of ev) { const m = e.data?.gm_move; if (m && (e.type === 'stakes.set' || e.type === 'scene.frame')) moves[m] = (moves[m] ?? 0) + 1; }
   const moveEntropy = entropy(Object.values(moves));
 
+  // ---------- deck (v0.4; null when the session has no deck.build events)
+  const dk = deckStats(ev, humanSeats);
+  const dm = dk?.metrics ?? null;
+
   // ---------- mechanics coverage
   const declares = by('action.declare');
+  const choices = dm ? { ...CHOICES, ...Object.fromEntries(Object.entries(DECK_CHOICES).filter(([k]) => k !== 'card.flaw' || dm.flawCards)) } : CHOICES;
   const countOf = (k) => k === 'choice.persuade' ? declares.filter((e) => e.data.target?.type === 'npc').length
     : k === 'choice.clue' ? declares.filter((e) => e.data.target?.type === 'clue').length
+    : k === 'deck.draft' ? dm.drafts.picked
+    : k === 'card.drive' ? Object.values(dm.drivePlays).reduce((a, b) => a + b, 0)
+    : k === 'card.flaw' ? dm.flawPlays
     : by(k).length;
-  const used = Object.fromEntries(Object.keys(MECHANICS).map((k) => [k, countOf(k)]));
-  const dead = Object.keys(CHOICES).filter((k) => used[k] === 0);
+  const used = Object.fromEntries(Object.keys({ ...choices, ...CONSEQUENCES }).map((k) => [k, countOf(k)]));
+  // a draft nobody was ever offered (or never resolved) is not a choice agents failed to make
+  const dead = Object.keys(choices).filter((k) => used[k] === 0 && !(k === 'deck.draft' && !(dm.drafts.picked + dm.drafts.skipped)));
   const quiet = Object.keys(CONSEQUENCES).filter((k) => used[k] === 0 && k !== 'audience.ingress');
 
   // ---------- algotype emergence (hidden drives)
@@ -147,7 +163,11 @@ export function reviewSession(session, opts = {}) {
       const n = texts.filter((t) => t.includes(kw)).length;
       if (n) { hitsN += n; evidence.push(`${kw}×${n}`); }
     }
-    algo[c.id] = { label: a.label, hits: hitsN, evidence, emerged: hitsN >= 2, revealed: ev.some((e) => e.type === 'algotype.reveal' && e.actor === c.id) };
+    // a played Drive card is the drive acting on the table: it counts as evidence like a keyword does
+    const driven = dm?.drivePlays[c.id] ?? 0;
+    if (driven) { hitsN += driven; evidence.push(`Drive card×${driven}`); }
+    const reveal = ev.find((e) => e.type === 'algotype.reveal' && e.actor === c.id);
+    algo[c.id] = { label: a.label, hits: hitsN, evidence, emerged: hitsN >= 2, revealed: !!reveal, ...(reveal?.data.via ? { via: reveal.data.via } : {}) };
   }
 
   // ---------- curves & arc
@@ -193,6 +213,18 @@ export function reviewSession(session, opts = {}) {
     if (!h) add('warning', 'game', 'beats_missed', `${names[id]} hit no beats`, `Declared: ${list.join(', ')}. The GM did not create (or recognise) openings.`);
   }
   if (beatsDeclared) add(beatRate >= 0.5 ? 'success' : 'info', 'game', 'beat_rate', `Beat fulfilment ${Math.round(beatRate * 100)}%`, `${hits.length} of ${beatsDeclared} declared beats hit.`, hits.map((h) => h.i));
+  if (dm) {
+    const ix = (es) => es.map((e) => e.i);
+    const pc = (x) => `${Math.round(x * 100)}%`;
+    const { rollPlays: R, improvised: imp, drafts: dr, removals: rem } = dm;
+    if (dm.improvisedShare <= 0.25 && dm.edgesPerRoll >= 0.8) add('success', 'game', 'hand_fit', 'The hand shaped play', `${R - imp} of ${R} rolled actions were built from a Move in hand (${pc(dm.improvisedShare)} improvised) with ${dm.edgesPerRoll} Edges per roll: the cards drawn were the options taken.`, ix(dk.at.rolled));
+    if (dm.improvisedShare > 0.35) add('warning', 'game', 'hand_misfit', 'Hands did not fit the scenes', `${imp} of ${R} rolled actions (${pc(dm.improvisedShare)}) were improvised: no Move in hand fit, so the roll got the base die. Hand size, skill spread or the scene's demands may be off.`, ix(dk.at.improvised));
+    if (dm.statusShareOfHand > 0.25) add('warning', 'game', 'hand_clogged', 'Hands clogged with status cards', `${pc(dm.statusShareOfHand)} of ${dm.hands.cards} cards drawn were status or compel cards (${dm.hands.status}); compels held at end of turn: ${dm.regretHeld} (stress paid: ${dm.regretStress}). Conditions pile up faster than haunts clear them.`, ix(dk.at.clogged));
+    if (dr.offered) add('info', 'game', 'drafts', `Drafts: ${dr.picked} of ${dr.offered} offers taken`, `${dr.picked} picked, ${dr.skipped - dr.unanswered} declined${dr.unanswered ? `, ${dr.unanswered} left unanswered (a reply that ignored the offer, not a choice)` : ''}${dr.offered > dr.picked + dr.skipped ? `, ${dr.offered - dr.picked - dr.skipped} still open at the end` : ''}. Picks: ${dr.picks.join(', ') || 'none'}.`, ix(dk.at.drafts));
+    if (rem.haunt) add('success', 'game', 'haunt_removals', 'Haunts thinned decks', `${rem.haunt} card(s) set down at haunts: ${dk.at.haunt.map((e) => e.data.card.name).join(', ')}.`, ix(dk.at.haunt));
+    else if (by('haunt.rest').length) add('info', 'game', 'haunt_removals', 'Haunts thinned no decks', `${by('haunt.rest').length} rest(s) at haunts, but nobody set a card down.`);
+    if (dm.deadCards.length) add('info', 'game', 'unplayed_cards', 'Cards that sat unused', `Drawn at least twice but never played: ${dm.deadCards.join(', ')}. Are they worth a slot in the deck?`);
+  }
   // narrative
   add('info', 'narrative', 'arc', `Arc shape: ${arc.shape}`, `Best fit r=${arc.fit} against Reagan et al.'s six emotional arcs.`);
   if (peakPos >= 0.6) add('success', 'narrative', 'late_climax', 'Tension peaked late', `Peak tension ${Math.max(...curves.tension).toFixed(2)} at ${Math.round(peakPos * 100)}% of the session.`, [peakIdx]);
@@ -203,7 +235,8 @@ export function reviewSession(session, opts = {}) {
   if (flagCounts.contradiction) add('failure', 'narrative', 'contradictions', 'Continuity contradictions', `${flagCounts.contradiction} narration(s) contradicted the fact ledger (facts were not added).`, flags.filter((f) => f.data.kind === 'contradiction').map((f) => f.i));
   if (invokes.length) add(avgDrift >= 0.25 && avgDrift <= 0.85 ? 'success' : 'info', 'narrative', 'memory_drift', 'Memories were reinterpreted', `${invokes.length} invocations, mean drift ${avgDrift.toFixed(2)} from the original (0 = verbatim, 1 = unrelated). Identity as committed confabulation was ${avgDrift >= 0.25 ? 'visible' : 'too timid'}.`, invokes.map((e) => e.i));
   for (const [id, a] of Object.entries(algo)) {
-    add(a.emerged ? 'success' : 'info', 'narrative', `algotype_${id}`, a.emerged ? `${names[id]}'s hidden drive surfaced` : `${names[id]}'s hidden drive stayed hidden`, `${a.label}${a.evidence.length ? ` — ${a.evidence.join(', ')}` : ''}${a.revealed ? ' · revealed by Ingressed fallout' : ''}.`);
+    const proof = dk ? [...(dk.at.drive[id] ?? []), ...ev.filter((e) => e.type === 'algotype.reveal' && e.actor === id).map((e) => e.i)] : [];
+    add(a.emerged ? 'success' : 'info', 'narrative', `algotype_${id}`, a.emerged ? `${names[id]}'s hidden drive surfaced` : `${names[id]}'s hidden drive stayed hidden`, `${a.label}${a.evidence.length ? ` — ${a.evidence.join(', ')}` : ''}${a.revealed ? ` · revealed by ${a.via === 'drive' ? 'playing the Drive card' : 'Ingressed fallout'}` : ''}.`, proof);
   }
   const unlocked = by('secret.unlock').length;
   add('info', 'narrative', 'secrets', `${unlocked} secret(s) unlocked`, 'Phase-gated secrets enter prompts only when their gate opens.');
@@ -212,6 +245,7 @@ export function reviewSession(session, opts = {}) {
   // agents
   if (fallbacks) add(fallbacks > 3 ? 'failure' : 'warning', 'agents', 'fallbacks', 'Agent replies fell back to scripted behaviour', `${fallbacks} call(s) failed or returned invalid JSON; ${retries} needed a retry.`);
   if (Object.keys(moves).length && moveEntropy < 1.5) add('warning', 'agents', 'gm_moves', 'GM relies on few moves', `Move entropy ${moveEntropy.toFixed(2)} bits: ${Object.entries(moves).map(([k, v]) => `${k}×${v}`).join(', ')}.`);
+  if (humanSeats.length) add('info', 'agents', 'human_seats', `Human seats: ${humanSeats.map((id) => names[id] ?? id).join(', ')}`, `${calls.filter((c) => c.data.human).length} decision(s) came from people, not models; they are left out of LLM call counts, latency and fallbacks.`);
   if (flagCounts.intent) add('info', 'agents', 'intent_issues', 'Agents proposed invalid intents', `${flagCounts.intent} intent issue(s) were corrected by the engine (unknown skills, bad targets, double memory use…).`, flags.filter((f) => f.data.kind === 'intent').map((f) => f.i));
 
   // ---------- descriptors & fitness (for the Explorer)
@@ -227,7 +261,7 @@ export function reviewSession(session, opts = {}) {
     peakPosition: +peakPos.toFixed(3),
     arcShape: arc.shape,
   };
-  const deadFrac = dead.length / Object.keys(CHOICES).length;
+  const deadFrac = dead.length / Object.keys(choices).length;
   const diffScore = 1 - Math.min(1, Math.abs(anySuccess - 0.58) / 0.35);
   const falloutScore = 1 - Math.min(1, Math.abs(falloutRate - 0.28) / 0.25);
   const fitness = +(
@@ -251,6 +285,7 @@ export function reviewSession(session, opts = {}) {
       narration: { beats: narr.length, avgWords: +avgWords.toFixed(1), repetition: +rep.ratio.toFixed(3), topPhrases: rep.top },
       gmMoves: moves, gmMoveEntropy: +moveEntropy.toFixed(2),
       mechanicsUsed: used, deadMechanics: dead,
+      deck: dm,
     },
     algotypes: algo,
     curves: { tension: curves.tension, affect: curves.affect },
@@ -260,6 +295,62 @@ export function reviewSession(session, opts = {}) {
     descriptors,
     fitness,
     judge: null,
+  };
+}
+
+// ------------------------------------------------------------------ deck
+
+/** v0.4 deck metrics from the deck.* events; `at` keeps the events findings cite. Null if no entity built a deck. */
+function deckStats(ev, humanSeats) {
+  const builds = ev.filter((e) => e.type === 'deck.build');
+  if (!builds.length) return null;
+  const of = (t) => ev.filter((e) => e.type === t);
+  const idle = (k) => k.kind === 'status' || k.kind === 'compel'; // held, never played as a Move
+  const tally = (cards) => { const o = {}; for (const k of cards) o[k.type] = (o[k.type] ?? 0) + 1; return o; };
+  const plays = of('deck.play');
+  const edgesOf = (e) => e.data.edges ?? [];
+  const played = plays.flatMap((e) => [e.data.move, ...edgesOf(e), e.data.guard, e.data.compel].filter(Boolean));
+  const rolled = plays.filter((e) => e.data.move || e.data.improvised);
+  const improvised = rolled.filter((e) => e.data.improvised);
+  const hands = of('deck.draw');
+  const held = hands.flatMap((e) => e.data.hand);
+  const drafts = of('deck.draft');
+  const picked = drafts.filter((e) => e.data.card);
+  const removes = of('deck.remove');
+  const removeKind = (e) => (/^set down/.test(e.data.why) ? 'haunt' : /^spent at/.test(e.data.why) ? 'spent' : /^erased/.test(e.data.why) ? 'erased' : 'other');
+  const removals = { haunt: 0, spent: 0, erased: 0, other: 0 };
+  for (const e of removes) removals[removeKind(e)]++;
+  const drivePlays = Object.fromEntries(builds.map((b) => [b.actor, 0]));
+  const drive = {};
+  for (const e of plays) for (const k of edgesOf(e)) if (k.type === 'drive') { drivePlays[e.actor] = (drivePlays[e.actor] ?? 0) + 1; (drive[e.actor] ??= []).push(e.i); }
+  const regret = of('deck.discard').filter((e) => e.data.regret?.length);
+  const drawn = tally(held), playedBy = tally(played);
+  const starting = builds.flatMap((b) => b.data.cards);
+  const startTypes = [...new Set(starting.filter((k) => !idle(k)).map((k) => k.type))];
+  const gains = of('deck.gain');
+  const share = (n, d) => (d ? n / d : 0);
+  return {
+    metrics: {
+      plays: plays.length, rollPlays: rolled.length, improvised: improvised.length,
+      improvisedShare: +share(improvised.length, rolled.length).toFixed(3),
+      edgesPerRoll: +share(rolled.reduce((s, e) => s + edgesOf(e).length, 0), rolled.length).toFixed(2),
+      playedByType: tally(played),
+      hands: { n: hands.length, cards: held.length, status: held.filter(idle).length },
+      statusShareOfHand: +share(held.filter(idle).length, held.length).toFixed(3),
+      // held = compels still in hand at end of turn; stress = what they actually cost after protection
+      regretHeld: regret.reduce((s, e) => s + e.data.regret.length, 0),
+      regretStress: of('stress').filter((e) => /^compel/.test(e.data.source ?? '')).reduce((s, e) => s + e.data.taken, 0),
+      // skipped = every offer not taken; unanswered = left out of the reply (pre-answer-field sessions count as declined)
+      drafts: { offered: of('deck.offer').length, picked: picked.length, skipped: drafts.length - picked.length, unanswered: drafts.filter((e) => e.data.answer === 'unanswered' || e.data.answer === 'invalid').length, picks: picked.map((e) => e.data.card.name) },
+      removals,
+      gainsByType: tally(gains.map((e) => e.data.card)),
+      drivePlays, revealsViaDrive: of('algotype.reveal').filter((e) => e.data.via === 'drive').length,
+      flawPlays: played.filter((k) => k.type === 'flaw').length,
+      flawCards: starting.filter((k) => k.type === 'flaw').length,
+      deadCards: startTypes.filter((t) => (drawn[t] ?? 0) >= 2 && !playedBy[t]),
+      humanSeats,
+    },
+    at: { rolled, improvised, clogged: hands.filter((e) => e.data.hand.some(idle)), drafts, haunt: removes.filter((e) => removeKind(e) === 'haunt'), drive },
   };
 }
 
