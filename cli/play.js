@@ -92,24 +92,10 @@ const names = Object.fromEntries(run.cast.map((c) => [c.id, c.name]));
 const quiet = !!args.quiet;
 const SHOW = new Set(['scene.enter', 'scene.frame', 'character.intro', 'action.declare', 'stakes.set', 'roll', 'outcome', 'fallout', 'clock.complete', 'clue.found', 'memory.invoke', 'memory.rewrite', 'memory.lose', 'theorize', 'beat.hit', 'stress.share', 'dialogue', 'ending', 'ending.narrate', 'character.epilogue', 'validator.flag', 'cone.change', 'algotype.reveal', 'character.dissolve',
   'stress', 'clock.tick', 'deck.play', 'deck.gain', 'deck.remove', 'deck.draft', 'haunt.rest', 'memory.form', 'audience.ingress', 'delve.forced', 'guard.set', 'npc.moved', 'stress.heal', 'complication']);
-/** Events describeEvent has no line for (it returns null), written out for the table. */
-const extra = (e) => {
-  const d = e.data, n = (id) => names[id] ?? id;
-  switch (e.type) {
-    case 'ending.narrate': return `GM: ${d.text}`;
-    case 'character.epilogue': return `${n(e.actor)}: ${d.text}`;
-    case 'delve.forced': return d.text;
-    case 'complication': return `Complication: ${d.text}`;
-    case 'npc.moved': return `${d.name} is moved by ${n(e.actor)}`;
-    case 'stress.heal': return `${n(d.target)} is mended: ${d.amount} ${d.resistance} stress cleared (total ${d.total})`;
-    case 'guard.set': return `${n(e.actor)} guards ${d.name} until their next turn`;
-    default: return null;
-  }
-};
 const onEvent = (e) => {
   if (quiet || !SHOW.has(e.type)) return;
   if (e.type === 'validator.flag' && e.actor && e.actor !== seat) return; // flags about other seats are not your business
-  const l = e.type === 'validator.flag' ? `  ⚑ ${e.data.kind}: ${e.data.detail}` : describeEvent(e, names) ?? extra(e);
+  const l = e.type === 'validator.flag' ? `  ⚑ ${e.data.kind}: ${e.data.detail}` : describeEvent(e, names);
   if (!l) return;
   if (e.type === 'scene.enter') console.log(`\n${bold(l)}`);
   else if (e.actor === seat && e.type !== 'validator.flag') console.log(bold(cyan(`▸ ${l}`)));

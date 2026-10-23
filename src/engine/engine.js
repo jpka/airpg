@@ -1360,11 +1360,15 @@ export function describeEvent(e, names = null) {
     case 'stakes.set': return `Stakes for ${n(e.actor)}: ${d.position}/${d.effect}, ${d.resistance} at risk (d${d.die}). ${d.failure_looks_like}`;
     case 'roll': return `${n(e.actor)} rolls [${d.dice.join(',')}]${d.removed.length ? ` minus [${d.removed.join(',')}]` : ''} → ${d.label}`;
     case 'outcome': return `GM: ${d.text}`;
+    case 'complication': return `Complication: ${d.text}`;
     case 'stress': return d.taken ? `${n(e.actor)} takes ${d.taken} ${d.resistance} stress (total ${d.total})` : null;
+    case 'stress.heal': return `${n(e.actor)} mends ${n(d.target)}: ${d.amount} ${d.resistance} stress cleared (total ${d.total})`;
     case 'fallout': return `${n(e.actor)} suffers ${d.severity} fallout: ${d.name}`;
     case 'clock.tick': return `${d.name} ${d.by > 0 ? '+' : ''}${d.by} (${d.value}/${d.size})`;
     case 'clock.complete': return `${d.name} is complete: ${d.onComplete}`;
     case 'clue.found': return `Clue ${d.id}: ${d.text}`;
+    case 'npc.moved': return `${d.name} is moved by ${n(e.actor)}`;
+    case 'delve.forced': return d.text;
     case 'memory.invoke': return `${n(e.actor)} remembers, differently: "${d.reinterpretation}"`;
     case 'memory.lose': return `${n(e.actor)} loses a memory.`;
     case 'memory.rewrite': return `${n(e.actor)}'s memory rewrites itself: "${d.after}"`;
@@ -1372,6 +1376,7 @@ export function describeEvent(e, names = null) {
     case 'theorize': return `${n(e.actor)} theorizes: "${d.theory}" → ${d.result}`;
     case 'beat.hit': return `${n(e.actor)} hits a beat: ${d.text}`;
     case 'stress.share': return `${n(e.actor)} shares ${n(d.from)}'s stress (cohesion ${d.cohesion})`;
+    case 'guard.set': return `${n(e.actor)} guards ${d.name} until their next turn`;
     case 'haunt.rest': return `${n(e.actor)} rests at ${d.name}, spending a memory`;
     case 'dialogue': return `${d.speaker}: ${d.text}`;
     case 'audience.ingress': return `The audience: ${d.text}`;
@@ -1379,6 +1384,8 @@ export function describeEvent(e, names = null) {
     case 'algotype.reveal': return `${n(e.actor)}'s hidden drive shows: ${d.algotype}`;
     case 'character.dissolve': return d.text;
     case 'ending': return `Ending: ${d.text}`;
+    case 'ending.narrate': return d.text ? `GM: ${d.text}` : null;
+    case 'character.epilogue': return d.text ? `${n(e.actor)}: ${d.text}` : null;
     case 'deck.play': {
       const names_ = [d.move?.name ?? (d.improvised ? `improvised ${d.improvised}` : null), ...(d.edges ?? []).map((k) => k.name), d.guard?.name, d.compel?.name].filter(Boolean);
       return names_.length ? `${n(e.actor)} plays ${names_.join(' + ')}` : null;
