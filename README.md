@@ -23,6 +23,10 @@ node cli/explore.js --iterations 120       # MAP-Elites over rule variants → e
 node cli/serve.js                          # viewer at http://localhost:8787
 ```
 
+## Deployment
+
+`.github/workflows/deploy.yml` runs on every push to `main`: it runs `npm test`, then publishes the viewer (`index.html`, `viewer/`, `src/`, `sessions/`) to GitHub Pages. Enable it once in the repo settings with **Settings → Pages → Source: GitHub Actions**. The published claude.ai artifact is a separate copy; it is republished from a Claude session, not by the workflow.
+
 ## Playing a seat yourself
 
 - **Browser:** run `node cli/serve.js`, open *Run live*, and set *You play* to a seat. On your turn a table opens beside the stage. You draw a hand (3 + your Horizon), pick one Move and up to two Edges, choose a target, and the preview shows your dice before you commit. The stage keeps playing the story at its own pace; *Skip to now* catches you up. The other seats are scripted, or Claude when the page runs on claude.ai.
