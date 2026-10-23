@@ -176,7 +176,7 @@ export function targetMenu(view) {
   const targets = [{ target: 'none', what: 'just talk / flavour; changes nothing mechanically' }];
   if (view.scene?.kind === 'delve') targets.push({ target: 'delve', what: 'push through the journey (Navigate fits)' });
   if (view.location?.isDelve === false) targets.push({ target: 'clue', what: 'search/read this place for clues (Discern fits); clues are needed to theorize' });
-  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).${n.givesClue ? ' Moving it also gives up one of this place\'s clues.' : ''}` });
+  for (const n of view.location?.npcs ?? []) targets.push({ target: `npc:${n.id}`, what: `${n.name} — wants: ${n.want}. Moved by: ${(n.movedBy ?? []).join(', ') || '?'} (+1 die). Resists: ${(n.resists ?? []).join(', ') || 'nothing'} (harder).${n.givesClues ? ` Moving it also gives up ${n.givesClues === 1 ? 'one' : n.givesClues} of this place's clues.` : ''}` });
   for (const c of view.clocks) if (c.kind !== 'delve') targets.push({ target: `clock:${c.id}`, what: `${c.name} ${c.value}/${c.size}${c.kind === 'progress' ? ' — fill it' : ' — push it back'}` });
   for (const a of view.allies) targets.push({ target: `ally:${a.id}`, what: `Mend ${a.name}` });
   for (const h of view.location?.haunts ?? []) targets.push({ target: `haunt:${h.id}`, what: `rest at ${h.name}: spend one memory to clear up to d${h.die} ${h.resistance} stress and gain 1 Resolve${view.you.deck ? '; you may also remove one card from your deck' : ''}` });

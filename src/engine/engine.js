@@ -7,7 +7,7 @@
 import { createRng, makeClock, tickClock, jaccard, deepClone, truncate } from './core.js';
 import {
   DEFAULT_RULES, RESISTANCES, POSITIONS, EFFECTS, DIFFICULTIES, SKILLS, DOMAINS,
-  mergeRules, bandOf, stepDie, stepDifficulty, positionRank, BAND_LABEL,
+  mergeRules, bandOf, stepDie, stepDifficulty, positionRank, BAND_LABEL, entityClues,
 } from './rules.js';
 import { CALLINGS } from '../content/entities.js';
 import { makeDeck, addCard, drawUpTo, discardHand, findCard, moveCard, cardsInPlay, heldEffects, pubCard } from './deck.js';
@@ -207,12 +207,12 @@ export class Engine {
   locationInfo() {
     const l = this.location();
     if (!l) return null;
-    // v0.5: while the place still hides clues, moving one of its entities gives one up
-    const cluesHere = !!this.rules.cluesFromEntities && (l.clueSeeds ?? []).some((s) => !this.state.cluesRevealedSeeds.has(s.id));
+    // v0.5: while the place still hides clues, moving one of its entities gives some up
+    const cluesHere = Math.min(entityClues(this.rules), (l.clueSeeds ?? []).filter((s) => !this.state.cluesRevealedSeeds.has(s.id)).length);
     return {
       id: l.id, name: l.name, tier: l.tier, domains: l.domains, description: l.description, isDelve: l.isDelve,
       haunts: (l.haunts ?? []).map((h) => ({ id: h.id, name: h.name, resistance: h.resistance, die: h.die, text: h.text })),
-      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want, movedBy: this.scenario.npcs[n].persuadedBy, resists: this.scenario.npcs[n].resists, ...(cluesHere ? { givesClue: true } : {}) })),
+      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want, movedBy: this.scenario.npcs[n].persuadedBy, resists: this.scenario.npcs[n].resists, ...(cluesHere ? { givesClues: cluesHere } : {}) })),
     };
   }
 
@@ -819,7 +819,7 @@ export class Engine {
         this.state.npcSuccess.add(t.id);
         this.emit('npc.moved', { npc: t.id, name: this.scenario.npcs[t.id].name }, { actor: action.actor });
         // v0.5: an entity you move gives up what it knows of this place (Brindlewood: any successful investigation finds a clue)
-        if (this.rules.cluesFromEntities) out.clues = this.#nextClueSeeds(Number(this.rules.cluesFromEntities));
+        if (entityClues(this.rules)) out.clues = this.#nextClueSeeds(entityClues(this.rules));
       } else if (t.type === 'ally') {
         const ally = this.char(t.id);
         const res = RESISTANCES.reduce((a, b) => (ally.stress[b] > ally.stress[a] ? b : a), RESISTANCES[0]);

@@ -300,7 +300,7 @@ Both LLM playtests on the current harness reached the finale with almost nothing
 
 ### Changes
 
-- **Moved entities give up clues** (`cluesFromEntities`, default 1). When an act on an entity succeeds, including success at a cost, the engine also reveals that place's next unrevealed clue seed. This follows Carved from Brindlewood, where any successful investigation yields a clue. The rule follows play, not the menu: reading a mind is investigation too. The GM gets the seed and words it as what the entity lets slip, and the clue records its source (`npc:gardener`). While a place still hides clues, each of its entities' target-menu line says *"Moving it also gives up one of this place's clues."* The browser, terminal and LLM seats all show this. The rule is a count (`0` is v0.4), and the explorer can vary it over 0–2.
+- **Moved entities give up clues** (`cluesFromEntities`, default 1). When an act on an entity succeeds, including success at a cost, the engine also reveals that place's next unrevealed clue seed. This follows Carved from Brindlewood, where any successful investigation yields a clue. The rule follows play, not the menu: reading a mind is investigation too. The GM gets the seed and words it as what the entity lets slip, and the clue records its source (`npc:gardener`). While a place still hides clues, each of its entities' target-menu line says *"Moving it also gives up one of this place's clues"* (or the real count, if the rule gives more). The browser, terminal and LLM seats all show this. The rule is a count (`0` is v0.4), and the explorer can vary it over 0–2. Any other value is read as a whole number of at least 0, so `true` means 1 and junk means 0.
 - **No searching in delves.** A `clue` target in a delve is refused with an intent issue. The action becomes talk and the cards stay in hand. The target menu already left the option out.
 - **Counterfactual.** Fourth light moved entities three times at landmarks that still had clues, and third light twice. Under v0.5 that would have meant 3 and 3 clues at the finale, about a 42% theory each instead of 8% and 17%.
 - With `cluesFromEntities: 0` the event streams are unchanged: v0.3's with `deck.enabled: false` and v0.4's with the deck. Tests pin both on two casts.
@@ -309,30 +309,44 @@ Both LLM playtests on the current harness reached the finale with almost nothing
 
 `node cli/measure.js --rules '{"deck":{"enabled":false},"cluesFromEntities":0}' --rules '{"deck":{"enabled":false}}' --rules '{"cluesFromEntities":0}' --rules '{}'`
 
-Seeds `measure-0…39` alternate between two casts: Choir + SORT/7 + Ilse-2, and Regent + Lattice Ghost + SORT/7. The harness reproduces §10's canon rates (35% and 55%). Its other rows differ a little from §10's table because the seeds differ.
+Seeds `measure-0…39` alternate between two casts: Choir + SORT/7 + Ilse-2, and Regent + Lattice Ghost + SORT/7. On the code §10 measured, the harness reproduced §10's canon rates exactly (35% and 55%). The v0.4 design calls (§10, *Design calls, reviewed*) have since moved the deck's rate to 53%. Other rows differ a little from §10's table because the seeds differ.
 
 | | v0.3 grammar, rule off | v0.3 grammar, rule on | v0.4 deck (rule off) | **v0.5** (deck, rule on) |
 |---|---|---|---|---|
-| Theory became canon | 35% | 68% | 55% | **83%** |
-| Sessions with a theory proposed | 35% | 70% | 55% | 85% |
-| Clues / session | 2.05 | 2.90 | 2.55 | 3.50 |
+| Theory became canon | 35% | 68% | 53% | **80%** |
+| Sessions with a theory proposed | 35% | 70% | 53% | 85% |
+| Clues / session | 2.05 | 2.90 | 2.63 | 3.55 |
 | … from entities | — | 0.88 | — | 0.95 |
-| Searches / session | 2.85 | 2.75 | 2.92 | 2.75 |
-| Clues accepted / theorize roll | 2.66 | 2.75 | 2.84 | 3.00 |
-| Ending: chosen | 8% | 20% | 3% | 5% |
-| Ending: closed | 20% | 13% | 5% | 5% |
-| Ending: overrun | 28% | 48% | 53% | 78% |
-| Ending: unread | 45% | 20% | 40% | 13% |
-| Any-success | 51% | 51% | 50% | 51% |
-| Fallout per roll | 0.50 | 0.51 | 0.52 | 0.54 |
-| Fitness | 4.01 | 4.04 | 3.94 | 3.93 |
+| Searches / session | 2.85 | 2.75 | 2.95 | 2.75 |
+| Clues accepted / theorize roll | 2.66 | 2.75 | 3.00 | 3.06 |
+| Ending: chosen | 8% | 20% | 3% | 8% |
+| Ending: closed | 20% | 13% | 3% | 3% |
+| Ending: overrun | 28% | 48% | 50% | 73% |
+| Ending: unread | 45% | 20% | 45% | 18% |
+| Any-success | 51% | 51% | 51% | 52% |
+| Fallout per roll | 0.50 | 0.51 | 0.51 | 0.53 |
+| Fitness | 4.01 | 4.04 | 3.97 | 3.97 |
 
-The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 51% to 74%, and to 82% with `cluesFromEntities: 2`. Clues per session go from 2.42 to 3.21 (3.79 with 2).
+The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 51% to 73%, and to 83% with `cluesFromEntities: 2`. Clues per session go from 2.43 to 3.21 (3.79 with 2).
 
 What this shows:
-- **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.92 → 2.75); and entities add about one clue per session.
-- **Scripted players overstate the canon rate.** They retry a failed theory in the finale until one lands (2.3 theorize rolls per session on v0.5), and their GM accepts 85% of claimed clues. Read the canon row as a ceiling for how often a theory can land, not a forecast for LLM tables.
-- **The theory now lands; answering the Aperture is the next gap.** The rule turns *unread* into *overrun* and *closed* into *chosen*: the party reads the pattern but does not answer it first. In 96% of overrun sessions the Ingression clock filled while the Aperture clock stood at about 1.6 of 6. Each wrong theory ticks Ingression by 2, so more theorizing also fills it faster. This was already the main loss before the rule (46% overrun over 400 seeds), and it is the next thing to tune: the Aperture's size, the finale's rounds, or a smaller Ingression tick for a wrong theory.
+- **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.95 → 2.75); and entities add about one clue per session.
+- **Scripted players overstate the canon rate.** They retry a failed theory in the finale until one lands (2.5 theorize rolls per session on v0.5), and their GM accepts 85% of claimed clues. Read the canon row as a ceiling for how often a theory can land, not a forecast for LLM tables.
+- **The theory now lands; answering the Aperture is the next gap.** The rule mostly turns *unread* into *overrun*, and *chosen* rises only a little: the party reads the pattern but does not answer it first. In 96% of overrun sessions the Ingression clock filled while the Aperture clock stood at about 1.6 of 6. Each wrong theory ticks Ingression by 2, so more theorizing also fills it faster. This was already the main loss before the rule (45% overrun over 400 seeds), and it is the next thing to tune: the Aperture's size, the finale's rounds, or a smaller Ingression tick for a wrong theory.
+
+### Review decisions
+
+An independent review of v0.5 (AGENTS.md) found three issues and raised three design concerns.
+
+**Changed**
+- **The DESIGN numbers above were stale.** They had been measured before the v0.4 design calls were merged in. They are re-measured on the merged code.
+- **`cluesFromEntities` is normalised.** `-1` used to reveal all but one of a place's clues (`slice(0, -1)`). One helper, `entityClues(rules)`, now reads the rule for the engine, the runner and the menu, and only whole numbers of at least 0 count.
+- **The menu hint states the real count**: "one", or the number the rule gives, capped by the clues still hidden.
+
+**Kept**
+- **Refusing a delve search is not behind a rule.** It is input validation, like refusing a `delve` target outside a delve, not a change to the rules. It only affects an agent that names a target the menu never offered, and that agent would otherwise spend a roll on a guaranteed "nothing here". Scripted agents never do it (0 refusals in 450 sessions), so the parity pins still hold. With `cluesFromEntities: 0`, LLM or human sessions differ from v0.3 only where v0.3 wasted a roll.
+- **Only the first clue in a batch gets the GM's wording.** A crit search, Look Again, or `cluesFromEntities: 2` reveals more than one clue, but the GM writes a single `clue_text`, and the rest keep their seed text. This is how searches have always worked, and it keeps the GM's reply short. The seed's meaning, which is what a theory cites, is never lost.
+- **An entity gives a clue every time it is moved, while clues remain.** It is a source of what the place knows, not a once-only reward. Fourth light moved the Gardener twice, and the counterfactual above counts both.
 
 ### Fifth light (LLM playtest on v0.5)
 

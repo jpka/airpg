@@ -217,6 +217,9 @@ test('v0.5: a moved entity gives up the place\'s next clue seed', () => {
   assert.deepEqual(moveGardener({ cluesFromEntities: 0 }).out.clues, []);   // v0.4 behaviour
   assert.deepEqual(moveGardener({ cluesFromEntities: 2 }).out.clues.map((c) => c.id), ['c1', 'c2']);
   assert.deepEqual(moveGardener({ cluesFromEntities: true }).out.clues.map((c) => c.id), ['c1']);
+  // review: junk values must not reveal the place (slice(0, -1) used to hand over all but one seed)
+  for (const v of [-1, 'x', null]) assert.deepEqual(moveGardener({ cluesFromEntities: v }).out.clues, [], String(v));
+  assert.deepEqual(moveGardener({ cluesFromEntities: 2.5 }).out.clues.map((c) => c.id), ['c1', 'c2']);
   // once the place is searched out, an entity has nothing left to give
   const { e: done } = moveGardener({});
   for (const id of ['c2', 'c3', 'c4']) done.state.cluesRevealedSeeds.add(id);
@@ -227,12 +230,17 @@ test('v0.5: a moved entity gives up the place\'s next clue seed', () => {
 test('v0.5: entities that still know something say so in the target menu', () => {
   const hint = /gives up one of this place's clues/;
   const e = mk(); e.start(); e.enterScene(2);
-  assert.equal(e.playerView('choir').location.npcs[0].givesClue, true);
+  assert.equal(e.playerView('choir').location.npcs[0].givesClues, 1);
   assert.match(targetMenu(e.playerView('choir')).find((t) => t.target === 'npc:gardener').what, hint);
   for (const id of ['c1', 'c2', 'c3', 'c4']) e.state.cluesRevealedSeeds.add(id);
   assert.doesNotMatch(targetMenu(e.playerView('choir')).find((t) => t.target === 'npc:gardener').what, hint);
   const off = mk({ cluesFromEntities: 0 }); off.start(); off.enterScene(2);
-  assert.ok(!('givesClue' in off.playerView('choir').location.npcs[0]));
+  assert.ok(!('givesClues' in off.playerView('choir').location.npcs[0]));
+  // review: the hint states the real count, capped by what is left
+  const two = mk({ cluesFromEntities: 2 }); two.start(); two.enterScene(2);
+  assert.match(targetMenu(two.playerView('choir')).find((t) => t.target === 'npc:gardener').what, /gives up 2 of this place's clues/);
+  for (const id of ['c1', 'c2', 'c3']) two.state.cluesRevealedSeeds.add(id);
+  assert.match(targetMenu(two.playerView('choir')).find((t) => t.target === 'npc:gardener').what, /gives up one of this place's clues/);
 });
 
 test('v0.5: the runner hands the GM the seed and records the clue as the entity\'s', async () => {

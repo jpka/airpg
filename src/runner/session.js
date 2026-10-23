@@ -2,6 +2,7 @@
 // Works in Node and the browser. Streams events through hooks.onEvent.
 
 import { Engine } from '../engine/engine.js';
+import { entityClues } from '../engine/rules.js';
 import { CALLINGS } from '../content/entities.js';
 import { MockGM, MockPlayer, MockValidator } from '../agents/agents.js';
 
@@ -116,7 +117,7 @@ export async function runSession(o) {
       // The seeds a success could reveal, so the GM can word the first one: a search may find two
       // (a crit, Look Again); a moved entity gives up `cluesFromEntities` of them (v0.5).
       const unrevealed = (engine.location()?.clueSeeds ?? []).filter((s) => !engine.state.cluesRevealedSeeds.has(s.id));
-      const fromEntity = action.target.type === 'npc' && engine.rules.cluesFromEntities ? Number(engine.rules.cluesFromEntities) : 0;
+      const fromEntity = action.target.type === 'npc' ? entityClues(engine.rules) : 0;
       const clueSeeds = action.target.type === 'clue' ? unrevealed.slice(0, 2) : unrevealed.slice(0, fromEntity);
       const clueFrom = fromEntity && clueSeeds.length ? o.scenario.npcs[action.target.id].name : null;
       const adj = await call('gm', 'adjudicate', () => gm.adjudicate(gmv, action, sheet, { clueSeeds, ...(clueFrom ? { clueFrom } : {}) }));

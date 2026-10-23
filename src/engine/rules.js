@@ -129,6 +129,11 @@ export function mergeRules(base, diff) {
   return out;
 }
 
+/** How many clues a moved entity gives up: `cluesFromEntities` as a whole number ≥ 0 (true is 1; junk is 0). */
+export function entityClues(rules) {
+  return Math.max(0, Math.floor(Number(rules?.cluesFromEntities) || 0));
+}
+
 export function stepDie(d, steps = 1) {
   const ladder = [4, 6, 8, 10, 12];
   const i = Math.max(0, ladder.indexOf(d));
