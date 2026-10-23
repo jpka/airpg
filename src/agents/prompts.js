@@ -186,7 +186,7 @@ export function targetMenu(view) {
 export function handForPrompt(deck) {
   return deck.hand.map((k) => {
     const o = { id: k.uid, name: k.name, kind: k.kind, text: k.text };
-    if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; if (deck.hand.some((x) => x.mutesMemory && x !== k)) o.note = 'worth +0 while you hold your flaw (play the flaw to lift it)'; }
+    if (k.type === 'memory') { o.memory = k.memory; o.remembers = k.memoryText; if (k.invokedThisScene) o.note = 'already invoked this scene'; if (deck.hand.some((x) => x.mutesMemory && x !== k)) o.note = `worth +0 while you hold your flaw (playing ${deck.hand.find((x) => x.mutesMemory).name} with ${deck.hand.find((x) => x.mutesMemory).edgeFor?.join(' or ') || 'its Move'} lifts it)`; }
     if (k.type === 'drive') o.inclination = k.disposition;
     if (k.type === 'domain') o.here = k.here ? 'yes: +1 die here' : 'no: +0 here';
     // Conditions as fields, not prose: fourth light's misplays were all conditional cards.
