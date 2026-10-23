@@ -7,7 +7,7 @@
 import { createRng, makeClock, tickClock, jaccard, deepClone, truncate } from './core.js';
 import {
   DEFAULT_RULES, RESISTANCES, POSITIONS, EFFECTS, DIFFICULTIES, SKILLS, DOMAINS,
-  mergeRules, bandOf, stepDie, stepDifficulty, positionRank, BAND_LABEL,
+  mergeRules, bandOf, stepDie, stepDifficulty, positionRank, BAND_LABEL, entityClues,
 } from './rules.js';
 import { CALLINGS } from '../content/entities.js';
 import { makeDeck, addCard, drawUpTo, discardHand, findCard, moveCard, cardsInPlay, heldEffects, pubCard } from './deck.js';
@@ -207,10 +207,12 @@ export class Engine {
   locationInfo() {
     const l = this.location();
     if (!l) return null;
+    // v0.5: while the place still hides clues, moving one of its entities gives some up
+    const cluesHere = Math.min(entityClues(this.rules), (l.clueSeeds ?? []).filter((s) => !this.state.cluesRevealedSeeds.has(s.id)).length);
     return {
       id: l.id, name: l.name, tier: l.tier, domains: l.domains, description: l.description, isDelve: l.isDelve,
       haunts: (l.haunts ?? []).map((h) => ({ id: h.id, name: h.name, resistance: h.resistance, die: h.die, text: h.text })),
-      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want, movedBy: this.scenario.npcs[n].persuadedBy, resists: this.scenario.npcs[n].resists })),
+      npcs: (l.npcs ?? []).map((n) => ({ id: n, name: this.scenario.npcs[n].name, description: this.scenario.npcs[n].description, want: this.scenario.npcs[n].want, movedBy: this.scenario.npcs[n].persuadedBy, resists: this.scenario.npcs[n].resists, ...(cluesHere ? { givesClues: cluesHere } : {}) })),
     };
   }
 
@@ -385,7 +387,7 @@ export class Engine {
   #applyCards(c, out, picked, issues) {
     const roll = out.needsRoll && out.kind === 'act';
     const d = { move: null, edges: [], guard: null, compel: null, improvised: false, dropped: [], ward: 0, extraClue: 0, allowed: 0, held: [] };
-    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk (target ${out.target.type})` : null);
+    const noRoll = (k) => (out.kind === 'talk' ? `${k.name} stays in hand: nothing is rolled when you only talk` : null);
     const drop = (k, why) => { if (!d.dropped.includes(k.uid)) d.dropped.push(k.uid); if (why) issues.push(why); };
     const moves = picked.filter((k) => k.kind === 'move');
     if (roll) {
@@ -581,7 +583,11 @@ export class Engine {
       if (!this.state.delveClockId) { issues.push('no delve in this scene'); return { type: 'none' }; }
       return { type: 'delve', id: this.state.delveClockId };
     }
-    if (t === 'clue' || t === 'clues') return { type: 'clue' };
+    if (t === 'clue' || t === 'clues') {
+      // Delves hide no clues: refuse the target instead of spending a roll on nothing (fourth light).
+      if (this.location()?.isDelve) { issues.push('nothing to search in a delve: clues lie at landmarks (target "delve" to push through)'); return { type: 'none' }; }
+      return { type: 'clue' };
+    }
     if (t === 'aperture') return this.parseTarget('clock:aperture', actorId, issues, { dry });
     const [kind, id] = t.split(':');
     if (kind === 'clock') {
@@ -816,6 +822,8 @@ export class Engine {
       } else if (t.type === 'npc') {
         this.state.npcSuccess.add(t.id);
         this.emit('npc.moved', { npc: t.id, name: this.scenario.npcs[t.id].name }, { actor: action.actor });
+        // v0.5: an entity you move gives up what it knows of this place (Brindlewood: any successful investigation finds a clue)
+        if (entityClues(this.rules)) out.clues = this.#nextClueSeeds(entityClues(this.rules));
       } else if (t.type === 'ally') {
         const ally = this.char(t.id);
         const res = RESISTANCES.reduce((a, b) => (ally.stress[b] > ally.stress[a] ? b : a), RESISTANCES[0]);
@@ -1000,9 +1008,9 @@ export class Engine {
     return chosen;
   }
 
-  /** Record a clue. `text` is the GM's wording; the seed keeps it anchored. */
-  addClue(seed, text, by) {
-    const clue = { id: seed.id, seed: seed.seed, text: truncate(text || seed.seed, 300), by, scene: this.state.scene?.id };
+  /** Record a clue. `text` is the GM's wording; the seed keeps it anchored. `source` names the entity that gave it up, if one did. */
+  addClue(seed, text, by, source = null) {
+    const clue = { id: seed.id, seed: seed.seed, text: truncate(text || seed.seed, 300), by, scene: this.state.scene?.id, ...(source ? { source } : {}) };
     this.state.clues.push(clue);
     this.emit('clue.found', clue, { actor: by });
     this.#checkSecrets();

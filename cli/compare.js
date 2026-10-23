@@ -9,6 +9,7 @@ const rows = [
   ['rules', (r) => r.session.config?.rules && Object.keys(r.session.config.rules).length ? JSON.stringify(r.session.config.rules) : 'default'],
   ['ending', (r) => r.session.ending],
   ['theory canon', (r) => (r.session.theory ? 'yes' : 'no')],
+  ['clues found (from entities)', (r) => (r.metrics.clues ? `${r.metrics.clues.found} (${r.metrics.clues.fromEntities})` : '—')],
   ['rolls', (r) => r.metrics.rolls],
   ['talk-only turns', (r) => r.metrics.talkOnly],
   ['agency', (r) => pct(r.metrics.agency)],

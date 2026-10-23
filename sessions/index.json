@@ -1,5 +1,10 @@
 [
   {
+    "file": "sessions/fifth-light.json",
+    "title": "Fifth light · v0.5, clues from entities",
+    "note": "Same cast and models on v0.5: entities that are moved give up a clue. Players searched as rarely as before (3 of 12 actions), but the Gardener, the Prime and the Pattern each let one slip, so the party reached the finale with 8 clues against fourth light's 0. The first theory missed; the second proved great. Weak spot: Ingression filled as the finale opened, so the ending is overrun, not chosen."
+  },
+  {
     "file": "sessions/fourth-light.json",
     "title": "Fourth light · v0.4, the deck",
     "note": "Same cast and models, now on v0.4 (v0.3's fixes plus the deck): Sonnet GM and three Haiku players on the file bridge. Every draft was taken, flaws were played as strengths 5 times and Drive cards 8 (Ilse-2's third revealed her drive). Against third light (v0.2): fallouts fell from 19 to 9, beats rose from 2/6 to 4/6, and no choice went dead. Watch the hand strip under the stage. Weak spot: no clues found, so the theory failed and the Aperture closed."

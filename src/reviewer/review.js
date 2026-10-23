@@ -279,6 +279,7 @@ export function reviewSession(session, opts = {}) {
       dissolved: by('character.dissolve').map((e) => names[e.actor]),
       clocksCompleted: completed, delveRolls, forcedDelves: forced.length,
       beats: { declared: beatsDeclared, hit: hits.length, rate: +beatRate.toFixed(3), hits: hits.map((h) => `${names[h.actor]}: ${h.data.text}`) },
+      clues: { found: by('clue.found').length, fromEntities: by('clue.found').filter((e) => e.data.source).length },
       memory: { invocations: invokes.length, meanDrift: +avgDrift.toFixed(3), rewrites: by('memory.rewrite').length, losses: by('memory.lose').length, rests: by('haunt.rest').length, formed: by('memory.form').length },
       agency: +agency.toFixed(3), talkOnly, spotlight, spotlightImbalance: Number.isFinite(spotlightImbalance) ? +spotlightImbalance.toFixed(2) : null,
       flags: flagCounts, agentCalls: llmCalls.length, fallbacks, retries, avgCallMs: Math.round(avgMs),

@@ -296,3 +296,18 @@ test('review round 2: muting flaw kept first, no-roll card plays are flagged, in
   e.declare('sort7', { say: 'Index 1.', target: 'none', draft: '1' });
   assert.equal(e.events.findLast((x) => x.type === 'deck.draft' && x.actor === 'sort7').data.answer, 'invalid');
 });
+
+test('v0.5: a search in a delve is refused before any card is spent', () => {
+  const e = mk(); e.enterScene(1); // the Morphic Slope
+  emptyHand(e, 'sort7');
+  const discern = hold(e, 'sort7', (k) => k.kind === 'move' && k.skill === 'Discern');
+  const look = hold(e, 'sort7', (k) => k.name === 'Look Again');
+  const a = e.declare('sort7', { do: 'read the slope for clues', target: 'clue', play: [discern.uid, look.uid] });
+  assert.equal(a.needsRoll, false);
+  assert.equal(a.kind, 'talk');
+  assert.ok(e.char('sort7').deck.hand.includes(discern) && e.char('sort7').deck.hand.includes(look)); // nothing wasted
+  assert.ok(!e.events.some((ev) => ev.type === 'deck.play' && ev.actor === 'sort7'));
+  assert.ok(e.events.some((ev) => ev.type === 'validator.flag' && /nothing to search in a delve/.test(ev.data.detail)));
+  // review: the talk-only notice must not contradict the refusal by naming 'target none'
+  assert.ok(!e.events.some((ev) => ev.type === 'validator.flag' && /target none/.test(ev.data.detail)));
+});

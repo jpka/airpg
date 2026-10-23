@@ -41,7 +41,7 @@ The game is in conversation with Michael Levin's work. It treats his ideas as *o
 
 **Beats (from Heart).** Each entity declares two beats from its calling. The GM must create openings for them; the engine validates hits. A minor beat grants Resolve (+1 die on a desperate roll). A major beat grows the light cone.
 
-**Theorize (from Carved from Brindlewood).** With clues found, propose what is ingressing and list the clue ids it explains. The GM judges only which clues the theory genuinely accounts for. Roll 2d6 + accepted clues − complexity. On 7+ the theory is true and becomes canon; on 10+ everyone also gets +1 die. A wrong theory costs Coherence and widens the opening.
+**Theorize (from Carved from Brindlewood).** Clues come from searching a landmark and, since v0.5, from any entity you move there (§11). With clues found, propose what is ingressing and list the clue ids it explains. The GM judges only which clues the theory genuinely accounts for. Roll 2d6 + accepted clues − complexity. On 7+ the theory is true and becomes canon; on 10+ everyone also gets +1 die. A wrong theory costs Coherence and widens the opening.
 
 **Endings.** *Chosen* (read and answered) · *Overrun* (read, but it arrived first) · *Closed* (answered unread) · *Unread*.
 
@@ -203,7 +203,7 @@ The request was a human seat with a deckbuilder interface, where a character's a
 - **Discard.** Unplayed cards go to the discard pile and the deck reshuffles when the draw pile runs out (Slay the Spire's rhythm). Stakes, dice, fallout and clocks are unchanged.
 - **The map.** Heart's campaign shape already reads like a deckbuilder run. Delves are the fights. Landmarks are where minds pick things up: entering one offers each entity a **draft** (one of its calling, one of the place's domain, one skill the place's entity is moved by), and so does a major beat. Haunts are **campfires**: the free rest also lets you **set down one card** (not your flaw, drive or memories). That gives haunts a use that is not only about stress, and they had been the most persistently dead mechanic since first light.
 
-`deck.enabled: false` keeps the v0.3 grammar. In that mode the engine reproduces v0.3's event streams exactly: 24 of 24 scripted sessions match event for event, apart from the rules header in `session.start`. Use it for old sessions and A/B runs.
+`deck.enabled: false` keeps the v0.3 grammar. In that mode the engine reproduces v0.3's event streams exactly: 24 of 24 scripted sessions match event for event, apart from the rules header in `session.start`. Use it for old sessions and A/B runs. Since v0.5, also set `cluesFromEntities: 0`; the tests pin both v0.3's and v0.4's streams.
 
 ### A seat for a person
 
@@ -261,7 +261,7 @@ What the deck did:
 
 What it exposed:
 - **Conditional cards were misplayed.** All four intent flags were cards played outside their condition: Look Again on a delve (twice), Chorus on a delve, Looping with the wrong Move. The engine dropped them correctly, but the prompt now states each card's condition as a field (`only_if_target`, `only_with_move`, `discard_only_with_move`) instead of prose.
-- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search rarely: 1 of 6 actions at the two landmarks, plus 1 in the finale, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it.
+- **Clue drought, not caused by the deck.** Third light found 1 clue and fourth light found none. Players search rarely: 1 of 6 actions at the two landmarks, plus 1 in the finale, and both rolls failed. A third search was made in a delve, where nothing can be found. So the finale theory has nothing to stand on. This is the next iteration's diagnosis: let entities that are moved (`npc.moved`) yield the landmark's next clue, as Brindlewood hands clues out on any successful investigation. Also refuse `clue` in delves instead of spending a roll on it. Both are done in v0.5 (§11).
 
 **Seat discipline again.** Two of the three Haiku seats each made one stray call to a messaging tool despite a two-command allowlist written into their instructions. One failed on a missing argument and the other was denied by the permission layer; neither had any effect. This is the third playtest with this pattern. Seat agents need a tool allowlist enforced by the harness, not only by their prompt.
 
@@ -285,14 +285,103 @@ An independent review of the deck raised a set of open design calls. Each was we
 - ***Unanchored* removes every card of the lost domain**, lent and innate alike. Losing a domain means losing it, and the sheet and deck stay in agreement.
 - **SORT/7 and Looping.** SORT/7's Coherence protection (1) absorbs Looping's end-of-turn cost (1), so the compel only clogs its hand. That is still a cost: it takes a hand slot. v0.3 compels had no mechanical cost at all, and a process that holds together shrugging off a loop is in character. Worth revisiting if compels multiply.
 - **An edge cut by the limit cannot free a memory for the free rest.** The rest is validated before the edge limit trims the play, so if a memory card is cut, a free rest that would spend that same memory has already been refused. It is rare (it needs a full edge budget plus a rest on the invoked memory), the engine flags it, and fixing it would need two validation passes. Not worth the complexity yet.
-- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off it still matches v0.3 exactly (24 of 24 scripted sessions, apart from the rules header).
+- **`rules.id` is `latent-0.4` even with the deck off**, and exported characters gain `flaw` and `deck: null`. The id names the code's rule set, while a variant is the rule diff that every session stores in full (`deck.enabled: false` is right there). The compatibility contract is the event log, and with the deck off (and, since v0.5, `cluesFromEntities: 0`) it still matches v0.3 exactly (24 of 24 scripted sessions, apart from the rules header).
 
-## 11. Known limits and next steps
+## 11. v0.5: clues from entities
+
+### Diagnosis
+
+The finale turns on one roll: 2d6 + accepted clues − 4, true on 7+. Its odds by clue count:
+
+| Clues | 0 | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|---|
+| Theory true | 8% | 17% | 28% | 42% | 58% | 72% |
+
+Both LLM playtests on the current harness reached the finale with almost nothing: third light with 1 clue, fourth light with none. Players do not search much. At the landmarks and the finale, third light searched 2 times in 12 actions and fourth light 2 in 10. Scripted agents search on about 55% of landmark turns, which is why the scripted numbers never showed the drought. What LLM players do instead is act on entities (6 and 4 times) and on clocks. Fourth light also spent a roll searching a delve, where nothing can be found.
+
+### Changes
+
+- **Moved entities give up clues** (`cluesFromEntities`, default 1). When an act on an entity succeeds, including success at a cost, the engine also reveals that place's next unrevealed clue seed. This follows Carved from Brindlewood, where any successful investigation yields a clue. The rule follows play, not the menu: reading a mind is investigation too. The GM gets the seed and words it as what the entity lets slip, and the clue records its source (`npc:gardener`). While a place still hides clues, each of its entities' target-menu line says *"Moving it also gives up one of this place's clues"* (or the real count, if the rule gives more). The browser, terminal and LLM seats all show this. The rule is a count (`0` is v0.4), and the explorer can vary it over 0–2. Any other value is read as a whole number of at least 0, so `true` means 1 and junk means 0.
+- **No searching in delves.** A `clue` target in a delve is refused with an intent issue. The action becomes talk and the cards stay in hand. The target menu already left the option out.
+- **Counterfactual.** Fourth light moved entities three times at landmarks that still had clues, and third light twice. Under v0.5 that would have meant 3 and 3 clues at the finale, about a 42% theory each instead of 8% and 17%.
+- With `cluesFromEntities: 0` the event streams are unchanged: v0.3's with `deck.enabled: false` and v0.4's with the deck. Tests pin both on two casts.
+
+### Measured (40 scripted seeds, two casts, default policy)
+
+`node cli/measure.js --rules '{"deck":{"enabled":false},"cluesFromEntities":0}' --rules '{"deck":{"enabled":false}}' --rules '{"cluesFromEntities":0}' --rules '{}'`
+
+Seeds `measure-0…39` alternate between two casts: Choir + SORT/7 + Ilse-2, and Regent + Lattice Ghost + SORT/7. On the code §10 measured, the harness reproduced §10's canon rates exactly (35% and 55%). The v0.4 design calls (§10, *Design calls, reviewed*) have since moved the deck's rate to 53%. Other rows differ a little from §10's table because the seeds differ.
+
+| | v0.3 grammar, rule off | v0.3 grammar, rule on | v0.4 deck (rule off) | **v0.5** (deck, rule on) |
+|---|---|---|---|---|
+| Theory became canon | 35% | 68% | 53% | **80%** |
+| Sessions with a theory proposed | 35% | 70% | 53% | 85% |
+| Clues / session | 2.05 | 2.90 | 2.63 | 3.55 |
+| … from entities | — | 0.88 | — | 0.95 |
+| Searches / session | 2.85 | 2.75 | 2.95 | 2.75 |
+| Clues accepted / theorize roll | 2.66 | 2.75 | 3.00 | 3.06 |
+| Ending: chosen | 8% | 20% | 3% | 8% |
+| Ending: closed | 20% | 13% | 3% | 3% |
+| Ending: overrun | 28% | 48% | 50% | 73% |
+| Ending: unread | 45% | 20% | 45% | 18% |
+| Any-success | 51% | 51% | 51% | 52% |
+| Fallout per roll | 0.50 | 0.51 | 0.51 | 0.53 |
+| Fitness | 4.01 | 4.04 | 3.97 | 3.97 |
+
+The 40-seed rates move a few points between seed sets. Over 400 seeds on the deck, the rule raises canon from 50% to 73%, and to 82% with `cluesFromEntities: 2`. Clues per session go from 2.43 to 3.21 (3.80 with 2).
+
+What this shows:
+- **The rule only adds clues.** Dice, stress and fallout are unchanged; searches barely move (2.95 → 2.75); and entities add about one clue per session.
+- **Scripted players overstate the canon rate.** They retry a failed theory in the finale until one lands (2.5 theorize rolls per session on v0.5), and their GM accepts 85% of claimed clues. Read the canon row as a ceiling for how often a theory can land, not a forecast for LLM tables.
+- **The theory now lands; answering the Aperture is the next gap.** The rule mostly turns *unread* into *overrun*, and *chosen* rises only a little: the party reads the pattern but does not answer it first. In 96% of overrun sessions the Ingression clock filled while the Aperture clock stood at about 1.6 of 6. Each wrong theory ticks Ingression by 2, so more theorizing also fills it faster. This was already the main loss before the rule (45% overrun over 400 seeds), and it is the next thing to tune: the Aperture's size, the finale's rounds, or a smaller Ingression tick for a wrong theory.
+
+### Review decisions
+
+An independent review of v0.5 (AGENTS.md) found three issues and raised three design concerns.
+
+**Changed**
+- **The DESIGN numbers above were stale.** They had been measured before the v0.4 design calls were merged in. They are re-measured on the merged code.
+- **`cluesFromEntities` is normalised.** `-1` used to reveal all but one of a place's clues (`slice(0, -1)`). One helper, `entityClues(rules)`, now reads the rule for the engine, the runner and the menu, and only whole numbers of at least 0 count.
+- **The menu hint states the real count**: "one", or the number the rule gives, capped by the clues still hidden.
+
+**Kept**
+- **Refusing a delve search is not behind a rule.** It is input validation, like refusing a `delve` target outside a delve, not a change to the rules. It only affects an agent that names a target the menu never offered, and that agent would otherwise spend a roll on a guaranteed "nothing here". Scripted agents never do it (0 refusals in 450 sessions), so the parity pins still hold. With `cluesFromEntities: 0`, LLM or human sessions differ from v0.3 only where v0.3 wasted a roll.
+- **Only the first clue in a batch gets the GM's wording.** A crit search, Look Again, or `cluesFromEntities: 2` reveals more than one clue, but the GM writes a single `clue_text`, and the rest keep their seed text. This is how searches have always worked, and it keeps the GM's reply short. The seed's meaning, which is what a theory cites, is never lost.
+- **A memory retold on a refused search is still spent.** The refusal turns the action into talk, and a retelling is a valid talk action: the memory is invoked and drift is recorded. Move and Edge cards that need a roll stay in hand. The notice for them no longer says "target none", which contradicted the refusal just before it (second review).
+- **The transcript line for a clue does not name its source.** `describeEvent` keeps rendering `clue.found` as `Clue c3: …`. The source stays in the event (`source: "npc:gardener"`) for the reviewer and the viewer, and the GM already words the clue in the entity's voice. Adding the name would lengthen every prompt's recent history for a fact the text already shows (final review).
+- **An entity gives a clue every time it is moved, while clues remain.** It is a source of what the place knows, not a once-only reward. Fourth light moved the Gardener twice, and the counterfactual above counts both.
+
+### Fifth light (LLM playtest on v0.5)
+
+Same cast, models and harness as fourth light: a Sonnet GM and three Haiku players on the file bridge, 56 calls, no fallbacks. `node cli/compare.js sessions/fourth-light.review.json sessions/fifth-light.review.json`:
+
+| | fourth (v0.4) | fifth (v0.5) |
+|---|---|---|
+| Clues found (from entities) | 0 (0) | 8 (3) |
+| Searches at landmarks and the finale | 2 of 10 actions | 3 of 12 |
+| Acts on entities | 4 | 4 |
+| Theory | false (0 clues, 2d6=7, total 3) | false with 3 accepted at the Library, then **great** with 4 at the Aperture (2d6=10, total 10) |
+| Ending | closed | overrun |
+| Any-success | 67% | 72% |
+| Fallouts (major) | 9 (2) | 2 (1) |
+| Beats hit | 4/6 | 2/6 |
+| Engine intent flags | 4 | 0 |
+| Fitness | 4.38 | 3.74 |
+
+What it shows:
+- **The drought is over.** Play looked much like fourth light: players searched about as rarely (3 of 12) and acted on entities as often (4). But every entity they moved gave something up: the Gardener, the Prime and the Pattern each yielded a clue, worded in the entity's voice ("I finished one, once. It woke with two heads, and wept for the one it had been."). With the searches, the party had 7 clues by the Library and 8 at the finale. The theory had a real chance: one miss at 3 accepted clues, then a *great* result.
+- **No wasted delve searches**, and no intent flags at all. The card-condition fields from fourth light also held.
+- **The ending shows the next gap, exactly as the scripted runs predicted.** The Ingression clock ticked once per scene (5), once on a failed roll, and by 2 for the wrong theory at the Library. It completed as the finale opened. The Aperture clock never moved, so the party read the pattern but could not answer it: *overrun*.
+- **Fitness fell, for reasons this rule does not touch.** Fallout was low (2 in 18 rolls, against a 28% target), beats were 2/6, and the Choir hit none. This is one session, and the GM was more lenient with stress than fourth light's. Read it alongside the 40-seed numbers, where fitness is flat.
+
+**Seat discipline.** One Haiku seat again made one stray call to a messaging tool (an empty `send_message`, which failed and changed nothing), despite a two-command allowlist in its instructions. That makes four playtests in a row with this pattern.
+
+## 12. Known limits and next steps
 
 - Bridge seats keep their own conversation history, so a player agent may remember further back than its Horizon allows. API-driven seats are stateless per call and do respect it.
 - The forked-voice fallout (*Split*) now adds a Second Voice card, but it still does not spawn a second agent instance. The design calls for one, with divergence tracked in the ledger.
 - The deck's numbers (hand base 3, two Edges, two copies per skill, offer size 3) were tuned on scripted agents only. The explorer now searches `deck.handBase` and `deck.edgesPerTurn`. Fitness has no deck-specific term yet; an improvised-share or clogged-hand penalty is a natural next step.
-- The clue drought above (§10, fourth light) is the next rules change to make and A/B.
+- The clue drought (§10, fourth light) is addressed by v0.5 (§11). The finale's next gap is the race between answering the Aperture and the Ingression clock. In scripted play, most theories that land still end *overrun*. Fifth light's Ingression filled as the finale opened, before anyone could act on the Aperture. Candidates: a smaller Ingression tick for a wrong theory, no per-scene tick in the finale, or an Aperture that starts partly filled when a theory is canon.
 - A person at the table plays at human speed. The browser seat waits indefinitely, while the file bridge times out after 30 minutes.
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
