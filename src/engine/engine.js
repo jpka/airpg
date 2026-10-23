@@ -1372,7 +1372,7 @@ export function describeEvent(e, names = null) {
     case 'theorize': return `${n(e.actor)} theorizes: "${d.theory}" → ${d.result}`;
     case 'beat.hit': return `${n(e.actor)} hits a beat: ${d.text}`;
     case 'stress.share': return `${n(e.actor)} shares ${n(d.from)}'s stress (cohesion ${d.cohesion})`;
-    case 'guard.set': return `${n(e.actor)} guards ${d.name}`;
+    case 'guard.set': return `${n(e.actor)} guards ${d.name} until their next turn`;
     case 'haunt.rest': return `${n(e.actor)} rests at ${d.name}, spending a memory`;
     case 'dialogue': return `${d.speaker}: ${d.text}`;
     case 'audience.ingress': return `The audience: ${d.text}`;
@@ -1380,8 +1380,8 @@ export function describeEvent(e, names = null) {
     case 'algotype.reveal': return `${n(e.actor)}'s hidden drive shows: ${d.algotype}`;
     case 'character.dissolve': return d.text;
     case 'ending': return `Ending: ${d.text}`;
-    case 'ending.narrate': return `GM: ${d.text}`;
-    case 'character.epilogue': return `${n(e.actor)}: ${d.text}`;
+    case 'ending.narrate': return d.text ? `GM: ${d.text}` : null;
+    case 'character.epilogue': return d.text ? `${n(e.actor)}: ${d.text}` : null;
     case 'deck.play': {
       const names_ = [d.move?.name ?? (d.improvised ? `improvised ${d.improvised}` : null), ...(d.edges ?? []).map((k) => k.name), d.guard?.name, d.compel?.name].filter(Boolean);
       return names_.length ? `${n(e.actor)} plays ${names_.join(' + ')}` : null;

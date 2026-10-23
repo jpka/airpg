@@ -83,7 +83,7 @@ Three tiers, kept separate on purpose:
 
 1. **Structural metrics from events.** These are exact: band distribution, success by position, fallout rate, delve rolls, beat fulfilment, agency (the share of actions that changed state), spotlight balance, memory drift, dead mechanics, engine flags, agent fallbacks, GM-move entropy, narration length and repetition.
 2. **Curves.** Tension combines threat-clock fill, stress load and live stakes, with a Dramatis-style escape-routes term. Affect is lexicon valence blended with mechanical valence. The affect curve is fit to Reagan et al.'s six arc shapes.
-3. **LLM judge.** Optional and noisy. Used comparatively (`judgePair` runs both orders and reports whether the judge agreed with itself).
+3. **LLM judge.** Optional and noisy. Used comparatively (`judgePair` runs both orders and reports whether the judge agreed with itself). The judge reads the `describeEvent` transcript. Past 220 lines it keeps the first 180 and the last 40, so the ending, final narration and epilogues are never cut (a mock session runs about 270 lines, and the ending fell past the old head-only cut).
 
 **Clips** are ranked from events, not text: magnitude × (1 + tension swing) × (1 + affect swing), capped at two per scene. Each clip carries the hook, roll, payoff, reasons and an estimated length. **Findings** are typed (success / warning / failure / info) and grouped into game, narrative and agents, and each links to event indices. Output: `*.review.md` for humans, `*.review.json` (with descriptors and fitness) for machines.
 
