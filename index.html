@@ -52,8 +52,7 @@ button { cursor: pointer; }
 .hud { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 8px; padding: 14px 16px 6px; }
 .brand { font-family: var(--display); font-weight: 800; letter-spacing: .32em; font-size: 12px; color: var(--ink); }
 .scene { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex: 1 1 auto; min-width: min(100%, 15ch); font-family: var(--display); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.scene > span:first-child { flex: 0 1 auto; }
-.scene span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene span:first-child { flex: 0 1 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .chip { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; text-transform: none; }
 
 .hook { margin: 4px 14px 0; padding: 10px 12px; font-family: var(--display); font-weight: 600; font-size: clamp(15px, 4.6vw, 19px); line-height: 1.2; text-wrap: balance; color: var(--ink); background: color-mix(in oklab, var(--panel) 80%, transparent); border-left: 3px solid var(--volt); border-radius: 4px 12px 12px 4px; }
@@ -70,7 +69,7 @@ button { cursor: pointer; }
 .clock.pulse svg { animation: pulse .9s ease-out; }
 @keyframes pulse { 0% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
-.focus { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 6px 16px 10px; min-height: 0; }
+.focus { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; padding: 6px 16px 10px; min-height: 0; overflow: hidden; }
 .speaker { display: flex; gap: 12px; align-items: center; }
 .sigil { flex: none; display: grid; place-items: center; }
 .sigil svg { color: hsl(var(--h, 260) var(--sig-s) var(--sig-l)); overflow: visible; }
@@ -284,6 +283,20 @@ label.inline select { width: auto; }
 .clues { display: grid; gap: 4px; }
 .deck-list summary { cursor: pointer; }
 .drift { font-family: var(--mono); font-size: 10.5px; color: var(--latent); }
+
+@media (max-width: 380px) {
+  .hud { padding: 10px 12px 2px; }
+  .clocks { padding: 4px 10px 2px; gap: 8px; }
+  .clock { width: 58px; }
+  .focus { padding: 4px 12px 8px; gap: 6px; }
+  .hand { padding: 0 10px 6px; gap: 4px; }
+  .hand .mini { height: clamp(42px, 6.4svh, 54px); }
+  .overlay { max-height: 46%; overflow-y: auto; scrollbar-width: none; padding-bottom: 16px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent); }
+  .party { padding: 0 8px 10px; }
+}
+
+@media (max-height: 680px) { .stage.busy .portrait { display: none; } }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
