@@ -90,7 +90,9 @@ button { cursor: pointer; }
 .caption { flex: 0 1 auto; }
 .stage.busy .caption { min-height: 0; font-size: clamp(15px, 4.2vw, 18px); }
 .focus > * { flex-shrink: 0; }
-.focus > .caption, .focus > .portrait { flex-shrink: 1; min-height: 0; }
+/* What is scrollable gives up height first, so the speaker's name is never the thing
+   squeezed out of the stage: the overlay and the caption both fade at their cut. */
+.focus > .caption, .focus > .portrait, .focus > .overlay { flex-shrink: 1; min-height: 0; }
 .caption.long { font-size: clamp(16px, 4.5vw, 19px); }
 .caption.xlong { font-size: clamp(14.5px, 4vw, 17px); }
 .stage.busy .caption.long, .stage.busy .caption.xlong { font-size: clamp(14px, 3.8vw, 16px); }
@@ -309,8 +311,10 @@ label.inline select { width: auto; }
   .clock { width: 52px; }
   .hand { padding: 0 8px 5px; }
   .hand .mini { max-width: 43px; }
-  .overlay { max-height: 72%; }
-  .focus { padding-top: 2px; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 10px); mask-image: linear-gradient(to bottom, transparent, #000 10px); }
+  .overlay { max-height: 72%; padding: 6px 10px 12px; }
+  .focus { gap: 4px; padding-top: 2px; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 10px); mask-image: linear-gradient(to bottom, transparent, #000 10px); }
+  .caption { padding-bottom: 10px; }
+  #speakerRole { display: none; }
   .party { padding: 0 8px 8px; }
 }
 
