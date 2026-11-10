@@ -195,12 +195,14 @@ If stdin closes, every remaining request is answered by a scripted player, so
     --watch           play no seat: everyone stays scripted and you just read the stream
     --quiet           no event lines, only requests and the result
     --seed <s>        the engine is deterministic: same seed, same dice
-    --review          append the automated design review to the end line, and write it out
+    --review          append the automated design review to the end line (and, with --out,
+                      write it beside the session file)
     --out <file>      write the session log here as well (default: no file)
     --config <file>   config/agents.mock.json by default: scripted, offline, no key needed
     --timeout <s>     how long a request waits for you before the scripted player takes the
                       turn (default 1800, 0 waits for ever). stdin staying open is not a
-                      promise that anyone is still reading.
+                      promise that anyone is still reading. Any line about the open request
+                      — a preview, a refused reply — starts the clock again.
 
 Other entry points in the kit: cli/play.js (a person at a terminal), cli/bridge.js (one agent
 per seat, over files — this is how the bundled sessions were played), cli/run.js (LLM agents

@@ -852,10 +852,10 @@ const LATENT = {
     const p = S.human?.pending;
     if (!p) throw new Error('no open request');
     if (id !== null && id !== p.id) throw new Error(`request ${id} is not open; the open request is ${p.id}`);
-    if (p.req.kind === 'act' && !force) {
-      let pv;
+    if (p.req.kind === 'act') {
+      let pv; // also under force: an unparseable reply throws here instead of killing the run
       try { pv = p.req.preview(reply ?? {}); } catch (e) { throw new Error(`the engine could not use that: ${e.message}`); }
-      if (pv?.issues?.length) throw new Error(`the engine would correct this reply: ${pv.issues.join('; ')} (fix it, or pass { force: true })`);
+      if (!force && pv?.issues?.length) throw new Error(`the engine would correct this reply: ${pv.issues.join('; ')} (fix it, or pass { force: true })`);
     }
     return answer(reply ?? {});
   },

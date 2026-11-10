@@ -465,8 +465,11 @@ empty, which is the real guarantee; the runs are the check on that claim.
 
 ### Review decisions
 
-An independent review of the first push found seven bugs; all are fixed with regression tests
-(the boot-order and origin ones are source-order checks, since the browser is not in `npm test`).
+Two independent reviews found eleven bugs between them; all are fixed with regression tests
+that were each checked by reverting the fix and watching the test fail. The browser is not in
+`npm test` (zero dependencies), so three of them work on `viewer/app.js` as source: the boot
+order, and the two predicates, which are lifted out and run against a stub rather than matched
+with a regex — a pattern match passes just as happily with the check deleted into a comment.
 The design calls it raised, decided:
 
 - **A request now waits 1800 seconds, not for ever** (`--timeout`, 0 to disable). §12 notes that
@@ -487,6 +490,18 @@ The design calls it raised, decided:
   session it is replaying, and this is the spectator surface — the viewer's own Ledger tab shows
   every seat's deck to anyone watching. So: documented, not filtered. `backstage` stays withheld
   by default, because the GM's unplayed branches are not part of the performance.
+- **The timeout shares the input queue, and the fallback must stay synchronous.** The timer
+  computes the scripted reply and then commits it. If a reply arrived in between, the commit
+  would resolve a request that no longer exists. It cannot today — `MockPlayer` resolves within
+  a microtask, so a stdin line never interleaves — but give the fallback 40ms of I/O and the
+  unqueued version dies on `Cannot read properties of null`. The timeout runs on the same queue
+  as the input lines, re-checks after awaiting, and `commit` is a no-op on an already-answered
+  request. Worth knowing for whoever makes the fallback a real agent.
+- **The deadline is about nobody reading, not about taking your time.** It restarts on any line
+  about the open request — a preview probe, a refused reply — so an agent thinking carefully
+  through five previews keeps its turn, while one that has stopped answering loses it. A value
+  larger than a 32-bit millisecond timer can hold is treated as "for ever" rather than silently
+  firing after 1ms with an error line claiming it waited a month.
 - **No session file unless you ask** (`--out`). The default wrote into whatever directory an agent
   ran from, which in a clone is the tracked `sessions/`. Every event is already on stdout.
 - **The feedback labels now exist** (`agent-feedback`, plus one per category). `gh issue create

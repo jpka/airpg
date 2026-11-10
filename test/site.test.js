@@ -128,14 +128,49 @@ test('the suggest panel cannot take the viewer down at boot', async () => {
     assert.match(app, new RegExp(`^function ${name}\\(`, 'm'), `${name} must be a function declaration, not a const: setTab reaches it before its line runs`);
     assert.ok(app.indexOf(`function ${name}(`) > boot, `${name} is below the boot call, which is why it must be hoisted`);
   }
-  assert.ok(!/^(const|let) (mountSuggest|suggestContext)\b/m.test(app), 'neither may become a const binding');
+  // …and nothing they reach may be a const or let declared below the boot call either.
+  const late = [...app.slice(boot).matchAll(/^(?:const|let) ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]);
+  const bodies = ['mountSuggest', 'suggestContext'].map((n) => { const i = app.indexOf(`function ${n}(`); return app.slice(i, app.indexOf('\n}\n', i)); }).join('\n');
+  for (const name of late) {
+    assert.ok(!new RegExp(`\\b${name}\\b`).test(bodies), `the suggest panel reaches "${name}", declared after the boot call: booting on that tab would throw`);
+  }
 });
 
 test('a session can only be loaded from this site', async () => {
+  // The real predicate, lifted out of app.js and run against a stub location — a regex over
+  // the source would pass just as happily with the check deleted into a comment.
   const app = await fs.readFile(path.join(repo, 'viewer/app.js'), 'utf8');
-  const check = app.slice(app.indexOf('const sameOrigin'), app.indexOf('async function startRun'));
-  assert.match(check, /new URL\(f, location\.href\)\.origin === location\.origin/, 'resolve the URL; a pattern match is not an origin check');
-  assert.match(check, /startsWith\('\/\/'\)/, '"//host/x.json" has no colon but leaves the origin');
+  const from = app.indexOf('const sameOrigin = ');
+  assert.ok(from > 0, 'sameOrigin moved; this test needs updating');
+  const src = app.slice(from, app.indexOf('\n};\n', from) + 3);
+  const sameOrigin = new Function('location', `${src}\nreturn sameOrigin;`)({ href: 'https://jpka.github.io/airpg/index.html', origin: 'https://jpka.github.io' });
+  for (const ok of ['sessions/first-light.json', 'sessions/a-b_c.json', 't/../sessions/x.json'.replace('../', '')]) {
+    assert.equal(sameOrigin(ok), true, `${ok} is this site's own`);
+  }
+  for (const no of ['//evil.example/x.json', 'https://evil.example/x.json', 'http://jpka.github.io/airpg/x.json', '../../etc/passwd.json', 'sessions/x.txt', 'javascript:alert(1)//x.json', '']) {
+    assert.equal(sameOrigin(no), false, `${no} must be refused`);
+  }
+});
+
+test('the browser route parses a reply even when told to force it', async () => {
+  // force skips the engine's *corrections*, never the parse: an unparseable reply that reaches
+  // the runner aborts the session with no ending. Same contract as cli/agent.js.
+  const app = await fs.readFile(path.join(repo, 'viewer/app.js'), 'utf8');
+  const fn = app.slice(app.indexOf('  reply: (reply,'), app.indexOf('  default: ()'));
+  assert.match(fn, /if \(p\.req\.kind === 'act'\) \{/, 'the preview must not be inside a !force branch');
+  assert.match(fn, /catch \(e\) \{ throw new Error\(`the engine could not use that/);
+  assert.match(fn, /if \(!force && pv\?\.issues\?\.length\)/, 'force gates the issues check only');
+});
+
+test('the request timeout cannot resolve a request that is already gone', async () => {
+  // Not reachable through the CLI today — MockPlayer resolves within a microtask, so a reply
+  // never lands mid-fallback — so the invariant is asserted where it lives. With a fallback
+  // that does I/O, the unqueued version dies on `pending` being null. See DESIGN §13.
+  const cli = await fs.readFile(path.join(repo, 'cli/agent.js'), 'utf8');
+  const timer = cli.slice(cli.indexOf('pending.timer = setTimeout'), cli.indexOf('}, patience * 1000);'));
+  assert.match(timer, /queue = queue\.then/, 'the timeout must share the queue with the input lines');
+  assert.match(timer, /if \(pending\?\.id === id\) commit\(reply\)/, 'and re-check after awaiting the fallback');
+  assert.match(cli, /const commit = \(reply\) => \{ const p = pending; if \(!p\) return false;/, 'commit must be a no-op on an already-answered request');
 });
 
 // ---------------------------------------------------------------- the suggestion box

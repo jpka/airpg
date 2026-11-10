@@ -88,12 +88,14 @@ async function fallback(req) {
 
 // ---------------------------------------------------------------- requests and stdin
 let pending = null, nextId = 1, eof = false;
+let queue = Promise.resolve(); // one thing at a time: a slow fallback must not race the next reply
+const MAX_WAIT = Math.floor((2 ** 31 - 1) / 1000); // setTimeout is 32-bit ms: more is "for ever"
 const patience = (() => { // --timeout with no number is a typo, not a one-second deadline
   if (args.timeout === undefined || args.timeout === true) return 1800;
   const n = Number(args.timeout);
-  if (Number.isFinite(n) && n >= 0) return n;
-  note(`--timeout "${args.timeout}" is not a number of seconds; waiting 1800`);
-  return 1800;
+  if (!Number.isFinite(n) || n < 0) { note(`--timeout "${args.timeout}" is not a number of seconds; waiting 1800`); return 1800; }
+  if (n > MAX_WAIT) { note(`--timeout ${n} is longer than a timer can hold (${MAX_WAIT}s); waiting for ever`); return 0; }
+  return n;
 })();
 function request(req) {
   if (eof) return fallback(req); // nobody is listening: no point announcing it
@@ -101,19 +103,34 @@ function request(req) {
   const { kind, view, targets, calling, need } = req;
   out({ type: 'request', id, kind, seat, view, ...(targets ? { targets } : {}), ...(calling ? { calling } : {}), ...(need ? { need } : {}), schema: SCHEMA[kind], hint: HINT[kind] });
   return new Promise((resolve) => {
-    pending = { id, req, resolve, refused: 0, timer: null };
+    pending = { id, req, resolve, refused: 0, timer: null, wait: null };
     if (!patience) return;
     // stdin stays open when a client simply stops answering, so EOF never comes and the whole
     // process waits for ever. The file bridge gives a seat 30 minutes; so does this.
-    pending.timer = setTimeout(async () => {
-      if (pending?.id !== id) return;
-      bad(id, `no reply in ${patience}s: the scripted player took this turn (pass --timeout 0 to wait for ever)`);
-      commit(await fallback(req));
-    }, patience * 1000);
-    pending.timer.unref?.(); // never hold the process open on its own account
+    // On the same queue as the input lines: a reply landing while the fallback is being
+    // computed would otherwise commit first, and this would then resolve a request that is
+    // already gone.
+    pending.wait = () => {
+      clearTimeout(pending.timer);
+      // On the same queue as the input lines: a reply landing while the fallback is being
+      // computed would otherwise commit first, and this would then resolve a request that is
+      // already gone. (Unreachable while the fallback is synchronous; see DESIGN §13.)
+      pending.timer = setTimeout(() => {
+        queue = queue.then(async () => {
+          if (pending?.id !== id) return;
+          bad(id, `no reply in ${patience}s: the scripted player took this turn (pass --timeout 0 to wait for ever)`);
+          const reply = await fallback(req);
+          if (pending?.id === id) commit(reply);
+        }).catch((e) => note(`timeout error: ${e.message}`));
+      }, patience * 1000);
+      pending.timer.unref?.(); // never hold the process open on its own account
+    };
+    pending.wait();
   });
 }
-const commit = (reply) => { const p = pending; pending = null; clearTimeout(p.timer); p.resolve(reply); };
+// Null-safe on purpose: whoever calls this races nobody today, but a committed request is
+// gone and committing it twice should be a no-op, not a crash in the middle of a session.
+const commit = (reply) => { const p = pending; if (!p) return false; pending = null; clearTimeout(p.timer); p.resolve(reply); return true; };
 const plain = (o) => o && typeof o === 'object' && !Array.isArray(o);
 
 async function onLine(raw) {
@@ -124,6 +141,7 @@ async function onLine(raw) {
   if (!plain(m)) return bad(pending?.id ?? null, 'expected one JSON object per line');
   if (!pending) return bad(m.id ?? null, 'no request is open right now');
   const { id, req } = pending;
+  pending.wait?.(); // you are evidently still there, so the deadline starts again
   if ('id' in m && m.id !== id) return bad(m.id, `request ${JSON.stringify(m.id)} is not open; the open request is ${id}`);
   try {
     if ('preview' in m) {
@@ -147,7 +165,6 @@ async function onLine(raw) {
 }
 
 const rl = readline.createInterface({ input: process.stdin, terminal: false });
-let queue = Promise.resolve(); // one line at a time: a slow fallback must not race the next reply
 rl.on('line', (l) => { queue = queue.then(() => onLine(l)).catch((e) => note(`input error: ${e.message}`)); });
 rl.on('close', () => { queue = queue.then(async () => { eof = true; if (pending) commit(await fallback(pending.req)); }); });
 
