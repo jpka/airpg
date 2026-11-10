@@ -208,10 +208,10 @@ test('a forced reply the engine cannot parse is an error, not a crash', async ()
 // Give the fallback real I/O and the unqueued version crashes; see DESIGN §13.)
 test('a reply that arrives after its request timed out is refused, not misapplied', async () => {
   let timedOut = 0, late = 0;
-  const r = await agent([...SEAT, '--seed', 'late-1', '--quiet', '--timeout', '1'], (m, send) => {
-    if (m.type === 'error' && /no reply in 1s/.test(m.error)) {
+  const r = await agent([...SEAT, '--seed', 'late-1', '--quiet', '--timeout', '0.15'], (m, send) => {
+    if (m.type === 'error' && /no reply in 0.15s/.test(m.error)) {
       timedOut++;
-      if (timedOut === 1) setTimeout(() => send({ id: m.id, reply: { say: 'too late', target: 'none' } }), 50);
+      if (timedOut === 1) setTimeout(() => send({ id: m.id, reply: { say: 'too late', target: 'none' } }), 30);
     }
     if (m.type === 'error' && /is not open/.test(m.error)) late++;
     // answer nothing else: every turn is meant to time out
@@ -223,8 +223,8 @@ test('a reply that arrives after its request timed out is refused, not misapplie
   assert.equal(late, 1, 'the late reply should be refused by id, exactly once');
 });
 
-test('--timeout 0 waits, and a wedged client with a timeout still finishes', async () => {
-  const r = await agent([...SEAT, '--seed', 'wedge-2', '--quiet', '--timeout', '1'], () => { /* never reply */ });
+test('a wedged client with a deadline still finishes', async () => {
+  const r = await agent([...SEAT, '--seed', 'wedge-2', '--quiet', '--timeout', '0.15'], () => { /* never reply */ });
   assert.equal(r.code, 0, r.err);
   assert.equal(r.msgs.at(-1).type, 'end');
   assert.ok(r.msgs.at(-1).events > 200);
@@ -235,7 +235,7 @@ test('--timeout 0 waits, and a wedged client with a timeout still finishes', asy
 // request "timed out" at once while the error line claimed it had waited 3000000 seconds.
 test('a deadline too large for a timer waits instead of firing at once', async () => {
   let killer = null;
-  const r = await agent([...SEAT, '--quiet', '--timeout', '3000000'], (m, send, child) => { killer ??= setTimeout(() => child.kill(), 1500); });
+  const r = await agent([...SEAT, '--quiet', '--timeout', '3000000'], (m, send, child) => { killer ??= setTimeout(() => child.kill(), 600); });
   clearTimeout(killer);
   assert.ok(!r.msgs.some((x) => x?.type === 'error' && /no reply in/.test(x.error)), 'nothing should have timed out');
   assert.match(r.err, /longer than a timer can hold/);
@@ -244,18 +244,20 @@ test('a deadline too large for a timer waits instead of firing at once', async (
 
 // The deadline is about nobody reading, not about taking your time.
 test('working on a turn keeps the deadline away', async () => {
+  let held = false;
   const r = await agent([...SEAT, '--seed', 'keepalive-1', '--quiet', '--timeout', '1'], (m, send) => {
     if (m.type !== 'request') return;
-    if (m.kind !== 'act') return send({ id: m.id, default: true });
-    let n = 0; // probe every 400ms for longer than the deadline, then answer
+    if (m.kind !== 'act' || held) return send({ id: m.id, default: true });
+    held = true; // once is the proof; the other seven turns need not cost a second each
+    let n = 0; // probe well inside the deadline, for longer than the deadline, then answer
     const probe = setInterval(() => {
-      if (++n > 4) { clearInterval(probe); return send({ id: m.id, default: true }); }
+      if (++n > 6) { clearInterval(probe); return send({ id: m.id, default: true }); }
       send({ id: m.id, preview: { target: m.targets[0].target, play: [] } });
-    }, 400);
+    }, 200);
   });
   assert.equal(r.code, 0, r.err);
   const previews = r.msgs.filter((x) => x?.type === 'preview');
-  assert.ok(previews.length >= 4, `expected the probes to be answered, got ${previews.length}`);
+  assert.ok(previews.length >= 6, `expected the probes to be answered, got ${previews.length}`);
   assert.ok(!r.msgs.some((x) => x?.type === 'error' && /no reply in/.test(x.error)), 'a turn being worked on must not time out');
   assert.equal(r.msgs.at(-1).type, 'end');
 });

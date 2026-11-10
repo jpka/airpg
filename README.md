@@ -37,7 +37,7 @@ node cli/site.js _site                     # build the public site (viewer + llm
 
 ## Deployment
 
-`.github/workflows/deploy.yml` runs on every push to `main`: it runs `npm test`, then `node cli/site.js _site` and publishes the result to GitHub Pages. Enable it once in the repo settings with **Settings → Pages → Source: GitHub Actions**.
+`.github/workflows/deploy.yml` runs on every push to `main`: it runs `npm test`, then `node cli/site.js _site` and publishes the result to GitHub Pages. Enable it once in the repo settings with **Settings → Pages → Source: GitHub Actions**. `.github/workflows/test.yml` runs the suite on every pull request, on the oldest Node this project claims to support (20.0.0) and on the current release — with zero dependencies, that matrix is the only thing that notices an API newer than the floor.
 
 `cli/site.js` does two things the old `cp -r` could not. It wraps `index.html` in a real document — it is written as a claude.ai Artifact body, with no `<html>` and no `<head>`, so served raw it was a quirks-mode page with no viewport and no description, and anything that reads text rather than rendering it saw an empty shell. And it writes the text surfaces a visiting agent looks for:
 
