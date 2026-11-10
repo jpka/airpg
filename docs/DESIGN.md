@@ -85,6 +85,7 @@ The planned campaign arc follows Heart's guidance of roughly eight linked sessio
   Below 380px the chrome is tightened (HUD, clocks, focus and hand padding) to buy height back. A stage shorter than 620px drops the portrait sigil while an overlay is up, since the name below it carries the same information; shorter than 470px it also narrows the clocks and the hand strip, trims the overlay's padding and hides the speaker's role line. Both are `@container stage` queries on the stage's own height — not the window's, which an iframe makes meaningless. Measured on a 320×568 stage: before any of this, the speaker's name sat 29px *above* the stage's top edge.
   - *Kept, with its cost:* on a 320×568 stage, or a 440×520 pane, the overlay is down to a line or two, scrollable with the scrollbar hidden, so only the fade says there is more. The room would have to come from the speaker's name or the party strip, and both carry more at a glance than a third line of stakes.
 
+  - *Kept:* the focus's mask makes it a backdrop root, so the overlay's `backdrop-filter` blurs the focus's own content instead of the field behind it. Rendered both ways at 390×844, the panel is indistinguishable — it is 88% opaque, so the blur was never carrying the look.
   - *Kept:* the caption's and the overlay's fade masks are unconditional. Each element's bottom padding is larger than its fade, so content that fits is not faded, and a JS overflow toggle would buy nothing.
 
 ## 7. Reviewer
