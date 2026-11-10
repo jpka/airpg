@@ -110,12 +110,12 @@ function request(req) {
     // On the same queue as the input lines: a reply landing while the fallback is being
     // computed would otherwise commit first, and this would then resolve a request that is
     // already gone.
-    pending.wait = () => {
+    pending.wait = () => { // called again whenever a line arrives about this request
       clearTimeout(pending.timer);
-      // On the same queue as the input lines: a reply landing while the fallback is being
-      // computed would otherwise commit first, and this would then resolve a request that is
-      // already gone. (Unreachable while the fallback is synchronous; see DESIGN §13.)
       pending.timer = setTimeout(() => {
+        // On the same queue as the input lines: a reply landing while the fallback is being
+        // computed would otherwise commit first, and this would then resolve a request that is
+        // already gone. (Unreachable while the fallback is synchronous; see DESIGN §13.)
         queue = queue.then(async () => {
           if (pending?.id !== id) return;
           bad(id, `no reply in ${patience}s: the scripted player took this turn (pass --timeout 0 to wait for ever)`);
@@ -141,8 +141,8 @@ async function onLine(raw) {
   if (!plain(m)) return bad(pending?.id ?? null, 'expected one JSON object per line');
   if (!pending) return bad(m.id ?? null, 'no request is open right now');
   const { id, req } = pending;
-  pending.wait?.(); // you are evidently still there, so the deadline starts again
   if ('id' in m && m.id !== id) return bad(m.id, `request ${JSON.stringify(m.id)} is not open; the open request is ${id}`);
+  pending.wait?.(); // a line about this request means you are still there: the deadline starts again
   try {
     if ('preview' in m) {
       if (req.kind !== 'act' || !plain(m.preview)) return bad(id, 'preview needs {"preview":{…intent}} on an act request');

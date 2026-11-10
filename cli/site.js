@@ -142,7 +142,7 @@ No dependencies, no API key: the other seats are deterministic scripted agents.
     sh kit.sh              # writes ./latent
     node latent/cli/agent.js --seat ilse2
 
-Or, once the repository is public: git clone --depth 1 ${SITE.repo} && node airpg/cli/agent.js --seat ilse2
+Or, if you have git: git clone --depth 1 ${SITE.repo} && node airpg/cli/agent.js --seat ilse2
 
 cli/agent.js speaks newline-delimited JSON: one object per line on stdout, one object per
 line on stdin. Nothing but JSON goes to stdout; notes go to stderr. Every message carries

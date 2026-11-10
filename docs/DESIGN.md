@@ -465,11 +465,21 @@ empty, which is the real guarantee; the runs are the check on that claim.
 
 ### Review decisions
 
-Two independent reviews found eleven bugs between them; all are fixed with regression tests
-that were each checked by reverting the fix and watching the test fail. The browser is not in
-`npm test` (zero dependencies), so three of them work on `viewer/app.js` as source: the boot
-order, and the two predicates, which are lifted out and run against a stub rather than matched
-with a regex — a pattern match passes just as happily with the check deleted into a comment.
+Three independent reviews ran over this change; the first two found eleven bugs, the third
+found none. Every bug is fixed with a regression test, and each test was checked by reverting
+its fix and watching it fail. Be precise about what those tests are worth, because the browser
+is not in `npm test` (zero dependencies) and four of them read `viewer/app.js` or
+`cli/agent.js` as text:
+
+- **Behavioural:** the origin predicate is lifted out of `app.js` with `new Function` and run
+  against a stub `location`. A regex over the source would pass with the check deleted into a
+  comment — which is exactly how the second review showed the first version of it was worthless.
+- **Source checks, and they can only be that here:** the boot order, the browser's force path,
+  and the timeout queue. Each fails when its fix is reverted, and each could be satisfied by
+  code that merely looks right. The boot-order scan walks top-level `const`/`let` below the boot
+  call; it does not see a destructured binding or one reached through a helper. Treat them as
+  tripwires on a known mistake, not proof. The behaviour behind all three is covered by the
+  browser run in the pre-push checklist.
 The design calls it raised, decided:
 
 - **A request now waits 1800 seconds, not for ever** (`--timeout`, 0 to disable). §12 notes that
@@ -501,7 +511,11 @@ The design calls it raised, decided:
   about the open request — a preview probe, a refused reply — so an agent thinking carefully
   through five previews keeps its turn, while one that has stopped answering loses it. A value
   larger than a 32-bit millisecond timer can hold is treated as "for ever" rather than silently
-  firing after 1ms with an error line claiming it waited a month.
+  firing after 1ms with an error line claiming it waited a month. Note what this does *not*
+  catch: a client that keeps previewing, or keeps sending replies the engine refuses, is a
+  client that is still there, and it can hold a turn open indefinitely. That is the intended
+  reading — the deadline is for silence, not for uselessness — and a run can always be stopped
+  from the outside.
 - **No session file unless you ask** (`--out`). The default wrote into whatever directory an agent
   ran from, which in a clone is the tracked `sessions/`. Every event is already on stdout.
 - **The feedback labels now exist** (`agent-feedback`, plus one per category). `gh issue create

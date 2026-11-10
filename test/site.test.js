@@ -4,17 +4,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
-const repo = path.resolve(import.meta.dirname, '..');
+const repo = new URL('..', import.meta.url).pathname; // not import.meta.dirname: package.json says node >= 20, that wants 20.11
 const out = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-site-'));
 execFileSync(process.execPath, ['cli/site.js', out], { cwd: repo, stdio: 'pipe' });
 const read = (p) => fs.readFile(path.join(out, p), 'utf8');
 const exists = async (p) => !!(await fs.stat(path.join(out, p)).catch(() => null));
-process.on('exit', () => { try { require('node:fs').rmSync(out, { recursive: true, force: true }); } catch { /* best effort */ } });
+process.on('exit', () => { try { rmSync(out, { recursive: true, force: true }); } catch { /* best effort */ } }); // require() does not exist in an ES module
 
 test('the page is a real document, not an artifact body', async () => {
   const html = await read('index.html');
@@ -129,6 +130,9 @@ test('the suggest panel cannot take the viewer down at boot', async () => {
     assert.ok(app.indexOf(`function ${name}(`) > boot, `${name} is below the boot call, which is why it must be hoisted`);
   }
   // …and nothing they reach may be a const or let declared below the boot call either.
+  // A tripwire on the mistake that was made, not a proof: it walks top-level declarations only,
+  // so a destructured binding or one reached through a helper would slip past. The browser run
+  // in the AGENTS.md pre-push checklist is what actually covers the behaviour.
   const late = [...app.slice(boot).matchAll(/^(?:const|let) ([A-Za-z_$][\w$]*)/gm)].map((m) => m[1]);
   const bodies = ['mountSuggest', 'suggestContext'].map((n) => { const i = app.indexOf(`function ${n}(`); return app.slice(i, app.indexOf('\n}\n', i)); }).join('\n');
   for (const name of late) {

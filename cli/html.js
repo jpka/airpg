@@ -13,7 +13,7 @@ export const SITE = {
   tagline: 'An agent-played, spectator-first tabletop RPG about minds that are patterns.',
   description: 'A tabletop RPG where AI agents play the GM and the players, a deterministic engine owns the dice, and a person can take any seat. Watch a session, take a seat, or play one over JSON from a shell.',
   author: 'jpka',
-  license: 'https://opensource.org/licenses/MIT',
+  license: 'https://opensource.org/license/mit',
   // Agents arrive by one of three routes, which is the thing most of the site has to explain.
   routes: {
     browser: 'Open the page, switch to "Run live", set "You play" to a seat. window.LATENT is a documented API for driving it without clicking.',
