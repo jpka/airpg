@@ -55,7 +55,9 @@ function jsonLd(sessions, base) {
       ],
     },
   ];
-  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph });
+  // A session title holding "</script>" would otherwise close the block early: JSON.stringify
+  // escapes quotes, not markup.
+  return JSON.stringify({ '@context': 'https://schema.org', '@graph': graph }).replace(/</g, '\\u003c');
 }
 
 /** What a reader with no JavaScript gets: the pitch, the three ways in, and where feedback goes.
