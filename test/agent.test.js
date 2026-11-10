@@ -213,14 +213,14 @@ test('a reply that arrives after its request timed out is refused, not misapplie
       timedOut++;
       if (timedOut === 1) setTimeout(() => send({ id: m.id, reply: { say: 'too late', target: 'none' } }), 30);
     }
-    if (m.type === 'error' && /is not open/.test(m.error)) late++;
+    if (m.type === 'error' && /is not open|no request is open/.test(m.error)) late++;
     // answer nothing else: every turn is meant to time out
   });
   assert.equal(r.code, 0, r.err);
   assert.equal(r.msgs.at(-1).type, 'end');
   assert.ok(r.msgs.at(-1).ending, 'the session still finishes');
   assert.ok(timedOut > 1, `expected several timeouts, got ${timedOut}`);
-  assert.equal(late, 1, 'the late reply should be refused by id, exactly once');
+  assert.equal(late, 1, 'the late reply must be refused, exactly once, and never applied to a later turn');
 });
 
 test('a wedged client with a deadline still finishes', async () => {

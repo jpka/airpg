@@ -18,6 +18,7 @@ jobs:
   test:
     name: npm test (node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 10 # the suite is seconds; these tests spawn processes that wait on stdin
     strategy:
       fail-fast: false
       matrix:
