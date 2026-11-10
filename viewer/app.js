@@ -1,6 +1,6 @@
 // LATENT spectator viewer. Replays (or follows live) a session event log.
 // Rendering is a pure function of (events[0..cursor]); scrubbing just re-reduces.
-import { sigil, coneGlyph, ringClock } from './sigils.js';
+import { sigil, coneGlyph, ringClock, cardPip } from './sigils.js';
 import { mountSeat, defaultReply } from './seat.js';
 import { reviewSession } from '../src/reviewer/review.js';
 import { renderMarkdown } from '../src/reviewer/report.js';
@@ -342,7 +342,7 @@ function pcHtml(st, id) {
 function miniCard(k, { played = false, big = false } = {}) {
   if (!k) return '';
   const b = k.bonus ? `+${k.bonus}` : k.kind === 'status' ? '✕' : k.kind === 'guard' || k.kind === 'compel' ? 'free' : '';
-  return `<span class="mini kind-${k.kind} t-${k.type}${played ? ' played' : ''}${big ? ' big' : ''}" title="${esc(k.name)} — ${esc(k.text)}"><span class="b">${esc(b)}</span><span class="n">${esc(k.name)}</span></span>`;
+  return `<span class="mini kind-${k.kind} t-${k.type}${played ? ' played' : ''}${big ? ' big' : ''}" title="${esc(k.name)} — ${esc(k.text)}"><span class="b">${cardPip(k.type, 'mini-pip')}<span>${esc(b)}</span></span><span class="n">${esc(k.name)}</span></span>`;
 }
 
 // ------------------------------------------------------------------ the human seat
