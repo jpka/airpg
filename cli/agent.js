@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Play one seat of a LATENT session as an LLM agent, over stdin/stdout, one JSON object per line.
-//   node cli/agent.js --seat <entityId> [--config config/agents.mock.json] [--seed s] [--rules path] [--out sessions/x.json] [--review] [--watch] [--quiet]
+//   node cli/agent.js --seat <entityId> [--config config/agents.mock.json] [--seed s] [--rules path]
+//                      [--out file.json] [--review] [--watch] [--quiet] [--timeout 1800]
 // stdout is NDJSON and nothing else (every message has "v":1 and a "type"); human-readable notes go to stderr.
 //   out: hello (first) · event {i, event:{type,actor,data}, text} (story beats; none with --quiet)
 //        · request {id, kind: intro|act|fallout|epilogue, seat, view, targets?, schema, hint} · preview {id, preview}
@@ -11,7 +12,10 @@
 //        a bare reply object with no id answers the open request. Blank lines are ignored.
 // An act reply the engine would correct (preview.issues) is refused with those issues; add "force":true to commit it anyway.
 // EOF on stdin, or a request nobody answers before it closes, plays on with the scripted fallback, so `</dev/null` plays a whole session.
-// --watch plays no seat: everyone stays scripted and you just read the session. Docs: https://jpka.github.io/airpg/play.txt
+// --watch plays no seat: everyone stays scripted and you just read the session.
+// A request nobody answers for --timeout seconds (default 1800, 0 to wait for ever) is played by
+// the scripted fallback, so a wedged client ends with a session instead of a hung process.
+// Docs: https://jpka.github.io/airpg/play.txt
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import readline from 'node:readline';
@@ -25,7 +29,11 @@ import { ENTITIES } from '../src/content/entities.js';
 
 const args = Object.fromEntries(process.argv.slice(2).map((a, i, arr) => a.startsWith('--') ? [a.slice(2), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : true] : null).filter(Boolean));
 const note = (s) => process.stderr.write(`${s}\n`);
-const config = JSON.parse(await fs.readFile(args.config ?? 'config/agents.mock.json', 'utf8'));
+// An agent that fetched the kit runs `node latent/cli/agent.js` from wherever it is standing,
+// so the default config is found next to this file, not in the working directory. A --config
+// path is the caller's own and stays relative to the working directory, as everywhere else.
+const here = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const config = JSON.parse(await fs.readFile(args.config ?? path.join(here, 'config/agents.mock.json'), 'utf8'));
 if (args.seed) config.seed = args.seed;
 if (args.rules) { // --rules config/rules/x.json : a rule diff layered over the config's rules
   const diff = JSON.parse(await fs.readFile(args.rules, 'utf8'));
@@ -80,14 +88,32 @@ async function fallback(req) {
 
 // ---------------------------------------------------------------- requests and stdin
 let pending = null, nextId = 1, eof = false;
+const patience = (() => { // --timeout with no number is a typo, not a one-second deadline
+  if (args.timeout === undefined || args.timeout === true) return 1800;
+  const n = Number(args.timeout);
+  if (Number.isFinite(n) && n >= 0) return n;
+  note(`--timeout "${args.timeout}" is not a number of seconds; waiting 1800`);
+  return 1800;
+})();
 function request(req) {
   if (eof) return fallback(req); // nobody is listening: no point announcing it
   const id = nextId++;
   const { kind, view, targets, calling, need } = req;
   out({ type: 'request', id, kind, seat, view, ...(targets ? { targets } : {}), ...(calling ? { calling } : {}), ...(need ? { need } : {}), schema: SCHEMA[kind], hint: HINT[kind] });
-  return new Promise((resolve) => { pending = { id, req, resolve, refused: 0 }; });
+  return new Promise((resolve) => {
+    pending = { id, req, resolve, refused: 0, timer: null };
+    if (!patience) return;
+    // stdin stays open when a client simply stops answering, so EOF never comes and the whole
+    // process waits for ever. The file bridge gives a seat 30 minutes; so does this.
+    pending.timer = setTimeout(async () => {
+      if (pending?.id !== id) return;
+      bad(id, `no reply in ${patience}s: the scripted player took this turn (pass --timeout 0 to wait for ever)`);
+      commit(await fallback(req));
+    }, patience * 1000);
+    pending.timer.unref?.(); // never hold the process open on its own account
+  });
 }
-const commit = (reply) => { const p = pending; pending = null; p.resolve(reply); };
+const commit = (reply) => { const p = pending; pending = null; clearTimeout(p.timer); p.resolve(reply); };
 const plain = (o) => o && typeof o === 'object' && !Array.isArray(o);
 
 async function onLine(raw) {
@@ -107,13 +133,14 @@ async function onLine(raw) {
     if (m.default) return commit(await fallback(req));
     const reply = 'reply' in m ? m.reply : 'id' in m ? undefined : m; // a bare object with no id is the reply itself
     if (!plain(reply)) return bad(id, 'reply must be a JSON object');
-    if (req.kind === 'act' && !m.force) {
-      const pv = req.preview(reply);
+    if (req.kind === 'act') {
+      const pv = req.preview(reply); // also under force: a reply the engine cannot parse at all
+      // throws here, inside the catch below, instead of later where nothing is watching.
       // Refuse, because every issue the engine raises is a real mistake and saying so teaches
       // the rules. But never more than twice per request: an agent that keeps resending the
       // same line has to get somewhere, so the third attempt commits with the corrections.
-      if (pv?.issues?.length && ++pending.refused <= 2) return bad(id, `the engine would correct this reply: ${pv.issues.join('; ')} (fix it, or add "force":true to commit it as is)`);
-      if (pv?.issues?.length) bad(id, `committing it with the engine's corrections after ${pending.refused} tries: ${pv.issues.join('; ')}`);
+      if (!m.force && pv?.issues?.length && ++pending.refused <= 2) return bad(id, `the engine would correct this reply: ${pv.issues.join('; ')} (fix it, or add "force":true to commit it as is)`);
+      if (!m.force && pv?.issues?.length) bad(id, `committing it with the engine's corrections after ${pending.refused} tries: ${pv.issues.join('; ')}`);
     }
     commit(reply);
   } catch (e) { bad(id, `the engine could not use that: ${e.message}`); }
@@ -151,16 +178,23 @@ if (Object.values(config.providers ?? {}).some((p) => p.type === 'bridge')) {
   await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(path.join(dir, 'SESSION_OVER'), 'done');
 }
-const name = args.out ?? path.join('sessions', `${config.label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${run.seed}.json`);
-await fs.mkdir(path.dirname(name), { recursive: true });
-await fs.writeFile(name, JSON.stringify(session));
+// No --out, no file: every event was already on stdout, and a default path would drop scratch
+// into whatever directory an agent happened to run this from (in a clone, the tracked one).
+const name = typeof args.out === 'string' ? args.out : null;
+if (name) {
+  await fs.mkdir(path.dirname(path.resolve(name)), { recursive: true });
+  await fs.writeFile(name, JSON.stringify(session));
+}
 const end = { type: 'end', events: session.events.length, calls: session.meta.calls, seconds: +((Date.now() - t0) / 1000).toFixed(1), ending: session.final.ending, out: name };
 if (args.review) {
   const review = reviewSession(session);
-  const base = name.replace(/\.json$/, '');
-  await fs.writeFile(`${base}.review.json`, JSON.stringify(review, null, 2));
-  await fs.writeFile(`${base}.review.md`, renderMarkdown(review));
-  end.review = { fitness: review.fitness, findings: review.findings.map((f) => f.code), json: `${base}.review.json`, md: `${base}.review.md` };
+  end.review = { fitness: review.fitness, findings: review.findings.map((f) => f.code) };
+  if (name) {
+    const base = name.replace(/\.json$/, '');
+    await fs.writeFile(`${base}.review.json`, JSON.stringify(review, null, 2));
+    await fs.writeFile(`${base}.review.md`, renderMarkdown(review));
+    Object.assign(end.review, { json: `${base}.review.json`, md: `${base}.review.md` });
+  }
 }
 out(end);
-note(`wrote ${name}`);
+note(name ? `wrote ${name}` : 'no --out given, so no session file was written');

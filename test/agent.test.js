@@ -184,3 +184,19 @@ test('a seat outside the cast exits 2 with the cast on stderr and nothing on std
     assert.match(r.err, /ilse2/);
   }
 });
+
+// A reply the engine cannot parse at all used to reach validateAction with "force", where the
+// throw was nobody's to catch: the process died with no end line and no session.
+test('a forced reply the engine cannot parse is an error, not a crash', async () => {
+  const r = await agent([...SEAT, '--seed', 'force-crash', '--quiet'], (m, send) => {
+    if (m.type !== 'request') return;
+    if (m.kind === 'act') send({ id: m.id, force: true, reply: { say: '', target: 'none', theorize: { theory: 't', clues: 'not-an-array' } } });
+    send({ id: m.id, default: true });
+  });
+  assert.equal(r.code, 0, r.err);
+  const end = r.msgs.at(-1);
+  assert.equal(end.type, 'end');
+  assert.ok(end.ending, 'the session still has to finish');
+  const errs = r.msgs.filter((l) => l?.type === 'error');
+  assert.ok(errs.some((e) => /could not use that/.test(e.error)), `expected a parse error, got ${JSON.stringify(errs.slice(0, 2))}`);
+});

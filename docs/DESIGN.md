@@ -440,13 +440,59 @@ convention an agent is most likely to try — not because it is expected to do t
 `robots.txt` names about thirty crawlers and allows each one; technically redundant, since the
 default is already allow-all, but a crawler that looks for its own token finds a yes, and its
 comments are addressed to whoever is reading the file, which is increasingly not a crawler.
-`ai.txt` is an opt-in where the format is normally an opt-out. What actually moves the needle is
-the repository being public and someone linking to it; that is a launch checklist, not code.
+`ai.txt` is an opt-in where the format is normally an opt-out.
+
+**The site is at a subpath, and two of those files want the domain root.** Crawlers fetch
+`/robots.txt` from the origin, not from `/airpg/robots.txt`, and the same is true of the
+convention for `llms.txt`. `https://jpka.github.io/robots.txt` is a 404 today — which is
+permissive, so nothing is blocked, but it means our `Sitemap:` line is never seen by a crawler
+that has not already been pointed here, and the robots file we ship is read only by an agent
+that fetches it on purpose. The per-page `<meta name="robots">` carries the allow signal
+instead, because that one is read where it sits. The real fix is a custom domain on this
+repository, or a `jpka.github.io` user site serving a root `robots.txt` with a `Sitemap:` line
+pointing at `/airpg/sitemap.xml`; until then the sitemap has to be submitted by hand. Worth
+knowing rather than quietly leaving a file that looks like it is working.
+
+What actually moves the needle is the repository being public and someone linking to it; that
+is a launch checklist, not code.
 
 **Nothing in the engine changed.** No rule moved, so there is no 40-seed table here. The check
 that matters is the opposite one: scripted sessions on this branch produce event streams
-identical to `main`, with the deck on (456 events) and off (318 events), compared as
-`[type, actor, data]` per event.
+identical to `main`, compared as `[type, actor, data]` per event, ignoring `rules` in
+`session.start` — seed `parity-2` with the deck on (456 events, 0 differing) and seed
+`parity-1` with `deck.enabled: false` (318 events, 0 differing). `git diff main -- src` is
+empty, which is the real guarantee; the runs are the check on that claim.
+
+### Review decisions
+
+An independent review of the first push found seven bugs; all are fixed with regression tests
+(the boot-order and origin ones are source-order checks, since the browser is not in `npm test`).
+The design calls it raised, decided:
+
+- **A request now waits 1800 seconds, not for ever** (`--timeout`, 0 to disable). §12 notes that
+  a person at the browser seat waits indefinitely, and that is right for a person. An agent is a
+  different risk: stdin staying open is no promise that anyone is still reading, so a wedged
+  client would have hung the process with no session to show for it. The scripted player takes
+  the turn and the game finishes. 1800 is the file bridge's own timeout.
+- **`LATENT.reply()` refuses what the shell route refuses.** It used to hand anything straight to
+  the engine, which silently corrected it — so the two routes disagreed about the same reply, and
+  §13's "same reply shapes" was not quite true. It now previews, throws with the reasons, and
+  takes `{ force: true }`. It also takes `{ id }`, because a reply that arrives after a timeout
+  would otherwise answer the *next* turn.
+- **`turn(ms)` returns `null` both when the session is over and when it timed out.** A sentinel
+  for the second case would make the documented loop (`if (!r) break`) wrong in a quieter way.
+  `state().running` tells them apart, and play.txt says so.
+- **`LATENT.events()` is the spectator's log, not your light cone.** It shows other seats' draws
+  and offers; the NDJSON route does not. Filtering it would make the spectator API lie about the
+  session it is replaying, and this is the spectator surface — the viewer's own Ledger tab shows
+  every seat's deck to anyone watching. So: documented, not filtered. `backstage` stays withheld
+  by default, because the GM's unplayed branches are not part of the performance.
+- **No session file unless you ask** (`--out`). The default wrote into whatever directory an agent
+  ran from, which in a clone is the tracked `sessions/`. Every event is already on stdout.
+- **The feedback labels now exist** (`agent-feedback`, plus one per category). `gh issue create
+  --label X` fails when X does not exist, so the command the site publishes was broken as
+  published. The category select defaults to `other` rather than `rules`, so an uncategorised
+  note is not filed as a balance complaint.
 
 ### Regenerating `og.png`
 

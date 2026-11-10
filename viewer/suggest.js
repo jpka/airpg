@@ -19,7 +19,8 @@ const label = (list, v) => list.find(([k]) => k === v)?.[1] ?? v;
 
 /** Compose one suggestion into every form it can be sent in. Pure: nothing is opened or stored. */
 export function compose(f = {}) {
-  const kind = f.kind || 'other';
+  const kind = KIND.some(([k]) => k === f.kind) ? f.kind : 'other'; // it ends up in a shell command and a label
+
   const note = String(f.note ?? '').trim();
   const title = (String(f.title ?? '').trim() || note.split(/[.\n]/)[0] || 'feedback from a visiting agent').slice(0, 110);
   const context = [
@@ -44,7 +45,7 @@ export function compose(f = {}) {
   const sq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
   return {
     title, body, labels: ['agent-feedback', kind], repo: REPO, url, tooLong: url.length > LIMIT,
-    gh: `gh issue create --repo ${REPO} --label agent-feedback,${kind} --title ${sq(title)} --body ${sq(body)}`,
+    gh: `gh issue create --repo ${REPO} --label ${sq(`agent-feedback,${kind}`)} --title ${sq(title)} --body ${sq(body)}`,
     curl: `curl -sS -X POST https://api.github.com/repos/${REPO}/issues \\\n  -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \\\n  -d ${sq(JSON.stringify({ title, body, labels: ['agent-feedback', kind] }))}`,
     json: JSON.stringify({ title, body, labels: ['agent-feedback', kind] }, null, 2),
   };
@@ -64,11 +65,12 @@ export function renderSuggest(el, { context = () => ({}), store } = {}) {
         <label>You got here by<select id="sgRoute">${opts(ROUTE, saved.route ?? 'browser')}</select></label>
       </div>
       <div class="seats">
-        <label>This is about<select id="sgKind">${opts(KIND, 'rules')}</select></label>
+        <label>This is about<select id="sgKind">${opts(KIND, 'other')}</select></label>
         <label>Model or client (optional)<input id="sgModel" maxlength="60" placeholder="e.g. a coding agent, or a model name" value="${esc(saved.model ?? '')}"></label>
       </div>
       <label>One-line summary (optional — the first sentence is used otherwise)<input id="sgTitle" maxlength="110" placeholder="clue economy: searching is never worth a turn"></label>
       <label>What you want to say<textarea id="sgNote" rows="7" maxlength="5000" placeholder="What did you expect, what happened, and where? If you played a seat, the seed and the event index make it reproducible."></textarea></label>
+      <p class="note">This becomes GitHub markdown, so an <span class="mono">@name</span> in it notifies that person.</p>
       <label class="inline"><input type="checkbox" id="sgCtx" checked style="width:auto"> Attach what this page knows: <span id="sgCtxWhat" class="mono"></span></label>
       <div class="row">
         <a class="btn primary" id="sgOpen" href="https://github.com/${REPO}/issues/new?labels=agent-feedback" target="_blank" rel="noopener">Open a pre-filled issue</a>
@@ -86,30 +88,30 @@ export function renderSuggest(el, { context = () => ({}), store } = {}) {
       <p class="note">No GitHub access at all? <span class="mono">https://jpka.github.io/airpg/suggest.txt</span> lists every other way. From a shell or your own code: <span class="mono">LATENT.suggest({note, kind, route})</span> returns the same title, body, URL and commands.</p>
     </div>`;
 
-  const fields = () => {
-    const ctx = $('#sgCtx').checked ? context() : {};
-    return {
-      who: $('#sgWho').value, route: $('#sgRoute').value, kind: $('#sgKind').value,
-      model: $('#sgModel').value.trim(), title: $('#sgTitle').value, note: $('#sgNote').value, ...ctx,
-    };
-  };
   const $ = (s) => el.querySelector(s);
+  const fields = () => ({
+    who: $('#sgWho').value, route: $('#sgRoute').value, kind: $('#sgKind').value,
+    model: $('#sgModel').value.trim(), title: $('#sgTitle').value, note: $('#sgNote').value,
+    ...($('#sgCtx').checked ? context() : {}),
+  });
+  /** Recompose on every keystroke, so the href in the DOM is never stale for whoever reads it. */
   const refresh = () => {
     const ctx = context();
     const bits = [ctx.session && ctx.session.replace(/^sessions\//, ''), ctx.seed && `seed ${ctx.seed}`, Number.isFinite(ctx.event) && `event ${ctx.event}`].filter(Boolean);
     $('#sgCtxWhat').textContent = bits.length ? bits.join(' · ') : 'nothing loaded yet';
     $('#sgCtx').disabled = !bits.length;
-    const c = compose(fields());
+    const f = fields();
+    const c = compose(f);
     $('#sgOpen').href = c.url;
     $('#sgPreTitle').textContent = c.title;
     $('#sgPreBody').textContent = c.body;
     $('#sgPreGh').textContent = c.gh;
     $('#sgPreCurl').textContent = c.curl;
-    const empty = !String(fields().note).trim();
+    const empty = !String(f.note).trim();
     $('#sgOpen').classList.toggle('off', empty);
     $('#sgStatus').textContent = empty ? 'Write something first; the buttons stay live either way.'
       : c.tooLong ? 'Long enough that a link may be truncated by the browser — use the gh or curl command instead.' : '';
-    store?.set('latent.suggest', { who: fields().who, route: fields().route, model: fields().model });
+    store?.set('latent.suggest', { who: f.who, route: f.route, model: f.model });
     return c;
   };
   const copy = async (text, what) => {

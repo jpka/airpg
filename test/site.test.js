@@ -104,6 +104,60 @@ test('--base builds the same site somewhere else', async () => {
   await fs.rm(other, { recursive: true, force: true });
 });
 
+test('the command the site publishes works from outside the repository', async () => {
+  // kit.sh writes ./latent and tells you to run `node latent/cli/agent.js --seat ilse2`, so
+  // the CLI has to find its own default config rather than one in the working directory.
+  const away = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-away-'));
+  const last = execFileSync(process.execPath, [path.join(repo, 'cli/agent.js'), '--seat', 'ilse2', '--seed', 'away-1', '--out', path.join(away, 's.json')], { cwd: away, input: '', encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore'] }).trim().split('\n').pop();
+  const end = JSON.parse(last);
+  assert.equal(end.type, 'end');
+  assert.ok(end.ending, 'it should reach an ending');
+  assert.ok(end.events > 200, `only ${end.events} events`);
+  await fs.rm(away, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------- the viewer's boot order
+// setTab() runs while viewer/app.js is still evaluating, and it can land on the suggest
+// panel from a stored tab or a #suggest hash. Anything that path reaches has to be hoisted,
+// or the module throws before window.LATENT exists and the whole page is dead.
+test('the suggest panel cannot take the viewer down at boot', async () => {
+  const app = await fs.readFile(path.join(repo, 'viewer/app.js'), 'utf8');
+  const boot = app.indexOf('setTab(TABS.includes(hash)');
+  assert.ok(boot > 0, 'the boot call moved; this test needs updating');
+  for (const name of ['mountSuggest', 'suggestContext']) {
+    assert.match(app, new RegExp(`^function ${name}\\(`, 'm'), `${name} must be a function declaration, not a const: setTab reaches it before its line runs`);
+    assert.ok(app.indexOf(`function ${name}(`) > boot, `${name} is below the boot call, which is why it must be hoisted`);
+  }
+  assert.ok(!/^(const|let) (mountSuggest|suggestContext)\b/m.test(app), 'neither may become a const binding');
+});
+
+test('a session can only be loaded from this site', async () => {
+  const app = await fs.readFile(path.join(repo, 'viewer/app.js'), 'utf8');
+  const check = app.slice(app.indexOf('const sameOrigin'), app.indexOf('async function startRun'));
+  assert.match(check, /new URL\(f, location\.href\)\.origin === location\.origin/, 'resolve the URL; a pattern match is not an origin check');
+  assert.match(check, /startsWith\('\/\/'\)/, '"//host/x.json" has no colon but leaves the origin');
+});
+
+// ---------------------------------------------------------------- the suggestion box
+test('feedback is composed safely, whatever it is handed', async () => {
+  const { compose, KIND } = await import(path.join(repo, 'viewer/suggest.js'));
+  const evil = compose({ kind: 'x; touch /tmp/latent-pwned #', note: "it's bad", title: '$(whoami) `id`' });
+  assert.deepEqual(evil.labels, ['agent-feedback', 'other'], 'an unknown kind must not reach a shell as itself');
+  assert.ok(!/touch \/tmp\/latent-pwned/.test(evil.gh.split("--title")[0].replace(/'[^']*'/g, '')), 'the label must be quoted or dropped');
+  for (const cmd of [evil.gh, evil.curl]) {
+    const unquoted = cmd.replace(/'(?:[^']|'\\'')*'/g, "''"); // strip single-quoted runs
+    assert.ok(!/\$\(|`|;\s*touch/.test(unquoted), `unquoted shell metacharacters in: ${unquoted.slice(0, 120)}`);
+  }
+  assert.ok(KIND.some(([k]) => k === 'rules'));
+  const ok = compose({ kind: 'rules', note: 'searching never pays for itself' });
+  assert.deepEqual(ok.labels, ['agent-feedback', 'rules']);
+  assert.equal(ok.title, 'searching never pays for itself');
+  assert.match(ok.url, /^https:\/\/github\.com\/jpka\/airpg\/issues\/new\?/);
+  assert.ok(new URL(ok.url).searchParams.get('body').includes('searching never pays for itself'));
+  assert.ok(!compose({ note: 'x' }).tooLong);
+  assert.ok(compose({ note: 'é'.repeat(5000) }).tooLong, 'a note too long for a GET must say so');
+});
+
 // ---------------------------------------------------------------- docs vs code
 test('play.txt documents the protocol cli/agent.js actually speaks', async () => {
   const doc = await read('play.txt');

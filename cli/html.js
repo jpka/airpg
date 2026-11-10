@@ -47,7 +47,7 @@ function jsonLd(sessions, base) {
     {
       '@type': 'Dataset', '@id': abs('#sessions'), name: 'LATENT session logs',
       description: `${sessions.length} complete sessions as typed event logs, each with an automated game-design and narrative-design review. The log is the contract between engine, viewer, reviewer and explorer.`,
-      url: abs('t/'), license: SITE.license, isAccessibleForFree: true, creator: { '@type': 'Person', name: SITE.author },
+      url: abs('t/index.txt'), license: SITE.license, isAccessibleForFree: true, creator: { '@type': 'Person', name: SITE.author },
       keywords: ['LLM agents', 'multi-agent', 'tabletop RPG', 'game design', 'agent evaluation', 'narrative generation'],
       distribution: [
         { '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: abs('sessions/index.json') },

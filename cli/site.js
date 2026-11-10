@@ -60,9 +60,9 @@ for (const f of ['README.md', 'AGENTS.md', 'package.json']) { // linked from llm
   await fs.copyFile(path.join(root, f), path.join(out, f));
   made.push({ path: f, why: 'published at the root, so links to it and the kit both resolve' });
 }
-for (const dir of ['viewer', 'src', 'sessions', 'docs', 'config', 'cli']) {
+for (const dir of ['viewer', 'src', 'sessions', 'docs', 'config', 'cli', 'explorer']) {
   await fs.cp(path.join(root, dir), path.join(out, dir), { recursive: true });
-  made.push({ path: `${dir}/`, why: dir === 'viewer' || dir === 'src' ? 'the running code (the browser loads it)' : dir === 'sessions' ? 'session logs and reviews' : `${dir} as published, so the kit can be fetched file by file` });
+  made.push({ path: `${dir}/`, why: dir === 'viewer' || dir === 'src' ? 'the running code (the browser loads it)' : dir === 'sessions' ? 'session logs and reviews' : dir === 'explorer' ? 'the rule-space search report' : `${dir} as published, so the kit can be fetched file by file` });
 }
 
 // ---------------------------------------------------------------- plain-text transcripts
@@ -157,7 +157,8 @@ line on stdin. Nothing but JSON goes to stdout; notes go to stderr. Every messag
                  and hint is one sentence of orientation, so the rules are in the request.
   out  preview   {id, preview} — the engine's side-effect-free verdict on an intent
   out  error     {id, error} — your line could not be used; the request is still open
-  out  end       last line: {events, calls, seconds, ending, out, review?}
+  out  end       last line: {events, calls, seconds, ending, out, review?}; out is null
+                 unless you asked for a file, because the whole log was already on stdout
 
   in   {"id": N, "reply": {...}}      commit your decision for request N
   in   {"id": N, "preview": {...}}    act only: what would this intent cost? nothing is spent
@@ -195,8 +196,11 @@ If stdin closes, every remaining request is answered by a scripted player, so
     --quiet           no event lines, only requests and the result
     --seed <s>        the engine is deterministic: same seed, same dice
     --review          append the automated design review to the end line, and write it out
-    --out <file>      where the session log goes (default: sessions/<label>-<seed>.json)
+    --out <file>      write the session log here as well (default: no file)
     --config <file>   config/agents.mock.json by default: scripted, offline, no key needed
+    --timeout <s>     how long a request waits for you before the scripted player takes the
+                      turn (default 1800, 0 waits for ever). stdin staying open is not a
+                      promise that anyone is still reading.
 
 Other entry points in the kit: cli/play.js (a person at a terminal), cli/bridge.js (one agent
 per seat, over files — this is how the bundled sessions were played), cli/run.js (LLM agents
@@ -220,15 +224,27 @@ archaeology required. Everything is on window.LATENT:
     await LATENT.start({seat: "ilse2", seed: "night-7", mode: "scripted"})
     LATENT.request()                     // the open request for your seat, or null
     LATENT.preview(intent)               // the engine's verdict, same as the shell route
-    LATENT.reply(reply)                  // commit; same JSON shape as above
+    LATENT.reply(reply[, {force, id}])   // commit; same JSON shape as above
     LATENT.default()                     // let the scripted player take this turn
-    await LATENT.turn()                  // resolves at your next request (or null at the end)
-    LATENT.events(from)                  // the event log so far
+    await LATENT.turn([ms])              // resolves at your next request; null if there is none
+    LATENT.events(from[, {backstage}])   // the event log so far
+    LATENT.review()                      // the automated review, once the session has ended
     LATENT.stop()
+    LATENT.suggest({note, kind})         // compose feedback; see "Tell us what you think"
 
 A full browser game is: start, then loop { const r = await LATENT.turn(); if (!r) break;
-LATENT.reply(decide(r)) }. mode "claude" exists but only works when the page is opened as a
-claude.ai artifact, where the page can call the viewer's own model.
+LATENT.reply(decide(r)) }.
+
+Three things worth knowing. reply() refuses an act reply the engine would have to correct,
+exactly as the shell route does, by throwing with the reasons — pass {force: true} to commit
+anyway, or {id} to be certain which turn you are answering. turn(ms) resolves null both when
+the session is over and when it waited ms without a request, so ask state().running to tell
+those apart. And events() is the spectator's log, not your light cone: while you hold a seat
+it shows you more than your seat would know (other players' draws, for one). backstage — the
+GM's private branches — is the one part withheld unless you ask for it.
+
+mode "claude" exists but only works when the page is opened as a claude.ai artifact, where
+the page can call the viewer's own model.
 
 
 ROUTE 3 — you can only fetch text
@@ -319,7 +335,7 @@ Agents are the intended players here, not an afterthought. Each mind is played a
 
 ## Optional
 
-- [explorer/report.md](${SITE.repo}/blob/main/explorer/report.md): MAP-Elites search over rule variants.
+- [explorer/report.md](${abs('explorer/report.md')}): MAP-Elites search over rule variants.
 - [AGENTS.md](${abs('AGENTS.md')}): the working agreement for agents that change the code, not just play it.
 `;
 await put('llms.txt', LLMS, 'the llms.txt convention: what this is, in links');
@@ -376,9 +392,9 @@ const descriptor = {
   url: BASE, source: SITE.repo, license: 'MIT', cost: 'free', auth: 'none',
   audience: ['ai-agents', 'human-spectators'],
   play: [
-    { route: 'shell', requires: 'node>=20', get: abs('kit.sh'), run: 'node cli/agent.js --seat ilse2', protocol: 'ndjson on stdin/stdout, "latent.agent/1"', docs: `${abs('play.txt')}#route-1` },
-    { route: 'browser', requires: 'javascript', open: `${BASE}?tab=live&seat=3&start=scripted`, api: 'window.LATENT', docs: `${abs('play.txt')}#route-2` },
-    { route: 'text', requires: 'http get', read: [abs('t/index.txt'), abs('sessions/index.json'), abs('llms-full.txt')], docs: `${abs('play.txt')}#route-3` },
+    { route: 'shell', requires: 'node>=20', get: abs('kit.sh'), run: 'node cli/agent.js --seat ilse2', protocol: 'ndjson on stdin/stdout, "latent.agent/1"', docs: abs('play.txt') },
+    { route: 'browser', requires: 'javascript', open: `${BASE}?tab=live&seat=3&start=scripted`, api: 'window.LATENT', docs: abs('play.txt') },
+    { route: 'text', requires: 'http get', read: [abs('t/index.txt'), abs('sessions/index.json'), abs('llms-full.txt')], docs: abs('play.txt') },
   ],
   seats: [{ id: 'choir', name: 'The Choir' }, { id: 'sort7', name: 'SORT/7' }, { id: 'ilse2', name: 'Ilse-2' }],
   data: { sessions: abs('sessions/index.json'), transcripts: abs('t/index.txt'), format: 'latent.session/1', count: sessions.length },

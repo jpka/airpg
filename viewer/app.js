@@ -778,10 +778,12 @@ const booted = Promise.all([
 ]).then(fromUrl, (e) => console.warn('boot', e));
 
 // ------------------------------------------------------------------ the suggestion box
-const suggestContext = () => ({
-  session: typeof S.source === 'string' && S.source.endsWith('.json') ? S.source : undefined,
-  seed: S.session?.meta?.seed, event: S.session ? S.cursor : undefined,
-});
+function suggestContext() { // a declaration, not a const: setTab('suggest') can run at boot, above this line
+  return {
+    session: typeof S.source === 'string' && S.source.endsWith('.json') ? S.source : undefined,
+    seed: S.session?.meta?.seed, event: S.session ? S.cursor : undefined,
+  };
+}
 function mountSuggest() {
   if (S.suggested) return; // setTab can fire before this file finishes evaluating, so the flag lives on S
   S.suggested = true;
@@ -794,7 +796,10 @@ function mountSuggest() {
 // no way to meet a game. Same reply shapes as the NDJSON seat in cli/agent.js.
 // Docs: https://jpka.github.io/airpg/play.txt
 const reqOut = () => { const p = S.human?.pending; if (!p) return null; const { preview, ...rest } = p.req; return { id: p.id, ...rest }; };
-const sameOrigin = (f) => /^[\w./-]+\.json$/.test(f) && !f.includes('..'); // never fetch a session from somewhere else
+const sameOrigin = (f) => { // never fetch a session from somewhere else: "//host/x.json" has no colon but leaves the origin
+  try { return /^[\w./-]+\.json$/.test(f) && !f.includes('..') && !f.startsWith('//') && new URL(f, location.href).origin === location.origin; }
+  catch { return false; }
+};
 
 async function startRun({ seat = null, seed = null, mode = 'scripted', cast = null, pacing = null, budget = null, legacy = false } = {}) {
   if (S.live?.running) throw new Error('a session is already running; LATENT.stop() first');
@@ -817,6 +822,7 @@ async function startRun({ seat = null, seed = null, mode = 'scripted', cast = nu
   if (claude && !$('#runClaude')) throw new Error('mode "claude" needs this page opened as a claude.ai artifact; use "scripted"');
   startLive(claude ? 'claude' : 'mock'); // deliberately not awaited: it resolves only when the session ends
   await new Promise((r) => setTimeout(r, 0));
+  if (!S.live?.running) throw new Error($('#liveStatus').textContent || 'the session did not start');
   return LATENT.state();
 }
 
@@ -828,7 +834,7 @@ const LATENT = {
     version: LATENT.version, tab: document.querySelector('.tabs [aria-selected="true"]')?.dataset.tab ?? null,
     source: S.source ?? null, running: !!S.live?.running, playing: S.playing,
     events: S.session?.events.length ?? 0, cursor: S.cursor,
-    scene: S.current?.scene ? { id: S.current.scene.id, title: S.current.scene.title, kind: S.current.scene.kind } : null,
+    scene: S.current?.scene ? { title: S.current.scene.title, kind: S.current.scene.kind } : null,
     clocks: Object.values(S.current?.clocks ?? {}).map((c) => ({ id: c.id, name: c.name, value: c.value, size: c.size })),
     seat: S.human?.seat ?? null, yourTurn: !!S.human?.pending, ending: S.current?.ending ?? null,
     calls: S.live?.calls ?? 0,
@@ -840,7 +846,19 @@ const LATENT = {
   request: reqOut,
   /** The engine's verdict on an intent: dice pool, where each die came from, difficulty, problems. Spends nothing. */
   preview: (intent) => { const p = S.human?.pending; if (!p) throw new Error('no open request'); if (p.req.kind !== 'act') throw new Error(`preview is for act requests; this one is "${p.req.kind}"`); return p.req.preview(intent ?? {}); },
-  reply: (reply) => { if (!S.human?.pending) throw new Error('no open request'); return answer(reply ?? {}); },
+  /** Commit a reply. As on the shell route, an act reply the engine would correct is refused
+   *  with the reasons; pass { force: true } to commit it anyway, or { id } to be sure of the turn. */
+  reply: (reply, { force = false, id = null } = {}) => {
+    const p = S.human?.pending;
+    if (!p) throw new Error('no open request');
+    if (id !== null && id !== p.id) throw new Error(`request ${id} is not open; the open request is ${p.id}`);
+    if (p.req.kind === 'act' && !force) {
+      let pv;
+      try { pv = p.req.preview(reply ?? {}); } catch (e) { throw new Error(`the engine could not use that: ${e.message}`); }
+      if (pv?.issues?.length) throw new Error(`the engine would correct this reply: ${pv.issues.join('; ')} (fix it, or pass { force: true })`);
+    }
+    return answer(reply ?? {});
+  },
   default: () => { const p = S.human?.pending; if (!p) throw new Error('no open request'); return answer(defaultReply(p.req)); },
   /** Resolves at your next request, or null when the session ends. `ms` gives up and returns null. */
   turn: (ms = 0) => new Promise((resolve) => {
@@ -855,6 +873,7 @@ const LATENT = {
   /** Compose feedback into a pre-filled issue URL plus gh/curl commands. { open: true } opens the issue. */
   suggest: (fields = {}, { open = false } = {}) => {
     const c = composeSuggest({ who: 'agent', route: 'browser', ...suggestContext(), ...fields });
+    if (open && c.tooLong) throw new Error('too long to send as a URL; run the .gh or .curl command instead');
     if (open) window.open(c.url, '_blank', 'noopener');
     return c;
   },
