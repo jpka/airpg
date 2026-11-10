@@ -2,6 +2,7 @@
 // Rendering is a pure function of (events[0..cursor]); scrubbing just re-reduces.
 import { sigil, coneGlyph, ringClock } from './sigils.js';
 import { mountSeat, defaultReply } from './seat.js';
+import { renderSuggest, compose as composeSuggest } from './suggest.js';
 import { reviewSession } from '../src/reviewer/review.js';
 import { renderMarkdown } from '../src/reviewer/report.js';
 import { runSession } from '../src/runner/session.js';
@@ -21,6 +22,9 @@ const S = {
   backstage: store.get('latent.backstage', false), clean: false,
   clip: null, live: null, manifest: [], current: null,
   human: null, // { seat, pending: { req, resolve } | null } while a person plays a seat
+  waiting: [], // resolvers for LATENT.turn(): an agent driving the page awaits its next request
+  suggested: false, // the suggestion box is mounted once, so a half-written note survives a tab switch
+  reqId: 0, // requests to the human seat are numbered, as in cli/agent.js, so a turn cannot be missed silently
 };
 const GM_LOOK = { shape: 'aperture', hue: 268 };
 const NPC_LOOK = { shape: 'npc', hue: 46 };
@@ -350,7 +354,7 @@ function miniCard(k, { played = false, big = false } = {}) {
 const humanUI = {
   request: (req) => new Promise((resolve) => {
     if (S.live?.stop) { resolve(defaultReply(req)); return; } // stopping: never wait on a person again
-    S.human.pending = { req, resolve };
+    S.human.pending = { req, resolve, id: ++S.reqId };
     const host = $('#seat');
     host.hidden = false;
     mountSeat(host, req, {
@@ -360,8 +364,23 @@ const humanUI = {
     host.classList.remove('waiting');
     $('#yourTurn').hidden = false;
     updateCatchup();
+    wake(req); // LATENT.turn() resolves here, so a visiting agent need not poll
   }),
 };
+/** Hand the open request (or null, at the end of the run) to everyone awaiting a turn. */
+function wake(req) { const w = S.waiting; S.waiting = []; for (const r of w) r(req); }
+/** Answer the open request from outside the card table, and leave the table visibly spent. */
+function answer(reply) {
+  const p = S.human?.pending;
+  if (!p) return false;
+  S.human.pending = null;
+  const host = $('#seat');
+  host.querySelectorAll('button, input, textarea, select').forEach((x) => (x.disabled = true));
+  host.classList.add('waiting');
+  $('#yourTurn').hidden = true;
+  p.resolve(reply);
+  return true;
+}
 function updateCatchup() {
   const box = document.querySelector('#seat .catchup');
   if (!box || !S.human?.pending || !S.session) return;
@@ -659,6 +678,7 @@ async function startLive(mode) {
     status.textContent = `Stopped: ${err?.code ?? err?.message ?? err}`;
   } finally {
     S.live.running = false;
+    wake(null); // release LATENT.turn(): there will be no further request
     $('#yourTurn').hidden = true;
     if (S.human) { $('#seat').classList.add('waiting'); $('#seat').insertAdjacentHTML('beforeend', '<p class="note">The session is over. Your choices are in the session file; the review is in the Review tab.</p>'); }
     $('#stopRun').disabled = true;
@@ -723,6 +743,7 @@ function setTab(name) {
   document.querySelectorAll('.panel').forEach((p) => (p.hidden = p.id !== `panel-${name}`));
   if (name === 'ledger') renderLedger();
   if (name === 'review') updateChartCursor();
+  if (name === 'suggest') mountSuggest();
   store.set('latent.tab', name);
 }
 document.querySelectorAll('.tabs [role=tab]').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
@@ -743,12 +764,112 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') { pause(); seek(nextVisible(S.cursor, -1)); }
 });
 
+const TABS = ['sessions', 'clips', 'review', 'ledger', 'live', 'suggest'];
 const hash = location.hash.slice(1);
-setTab(['sessions', 'clips', 'review', 'ledger', 'live'].includes(hash) ? hash : store.get('latent.tab', 'sessions'));
+setTab(TABS.includes(hash) ? hash : store.get('latent.tab', 'sessions'));
 startField();
 renderLive();
-loadManifest().then(() => {
-  // Open on a characterful still: the first stakes declaration rather than an empty stage.
-  if (S.session) { const i = S.session.events.findIndex((e) => e.type === 'stakes.set'); if (i > 0) { S.cursor = i; render(); } }
+const booted = Promise.all([
+  loadManifest().then(() => {
+    // Open on a characterful still: the first stakes declaration rather than an empty stage.
+    if (S.session) { const i = S.session.events.findIndex((e) => e.type === 'stakes.set'); if (i > 0) { S.cursor = i; render(); } }
+  }),
+  initCapabilities(),
+]).then(fromUrl, (e) => console.warn('boot', e));
+
+// ------------------------------------------------------------------ the suggestion box
+const suggestContext = () => ({
+  session: typeof S.source === 'string' && S.source.endsWith('.json') ? S.source : undefined,
+  seed: S.session?.meta?.seed, event: S.session ? S.cursor : undefined,
 });
-initCapabilities();
+function mountSuggest() {
+  if (S.suggested) return; // setTab can fire before this file finishes evaluating, so the flag lives on S
+  S.suggested = true;
+  renderSuggest($('#panel-suggest'), { store, context: suggestContext });
+}
+
+// ------------------------------------------------------------------ window.LATENT
+// A documented way to drive this page, because the other audience for a spectator-first game
+// is an agent with a browser, and clicking a card table through a DOM it has to guess at is
+// no way to meet a game. Same reply shapes as the NDJSON seat in cli/agent.js.
+// Docs: https://jpka.github.io/airpg/play.txt
+const reqOut = () => { const p = S.human?.pending; if (!p) return null; const { preview, ...rest } = p.req; return { id: p.id, ...rest }; };
+const sameOrigin = (f) => /^[\w./-]+\.json$/.test(f) && !f.includes('..'); // never fetch a session from somewhere else
+
+async function startRun({ seat = null, seed = null, mode = 'scripted', cast = null, pacing = null, budget = null, legacy = false } = {}) {
+  if (S.live?.running) throw new Error('a session is already running; LATENT.stop() first');
+  setTab('live');
+  if (cast) cast.forEach((id, i) => { const el = $(`#cast${i}`); if (el && ENTITIES[id]) el.value = id; });
+  const ids = [0, 1, 2].map((i) => $(`#cast${i}`).value);
+  let idx = '';
+  if (seat !== null && seat !== '' && seat !== false) {
+    const n = Number(seat);
+    idx = Number.isFinite(n) && n >= 1 && n <= 3 ? String(n - 1) : String(ids.indexOf(String(seat)));
+    if (idx === '-1') throw new Error(`seat "${seat}" is not in this cast (${ids.join(', ')}); pass an entity id or 1-3`);
+  }
+  $('#humanSeat').value = idx;
+  if (seed) $('#seed').value = seed;
+  if (pacing) $('#pacing').value = pacing;
+  if (budget) $('#budget').value = budget;
+  $('#legacyRules').checked = !!legacy && idx === '';
+  $('#humanSeat').dispatchEvent(new Event('change'));
+  const claude = mode === 'claude';
+  if (claude && !$('#runClaude')) throw new Error('mode "claude" needs this page opened as a claude.ai artifact; use "scripted"');
+  startLive(claude ? 'claude' : 'mock'); // deliberately not awaited: it resolves only when the session ends
+  await new Promise((r) => setTimeout(r, 0));
+  return LATENT.state();
+}
+
+const LATENT = {
+  version: 'latent.viewer/1',
+  docs: 'https://jpka.github.io/airpg/play.txt',
+  ready: () => booted.then(() => LATENT.state()),
+  state: () => ({
+    version: LATENT.version, tab: document.querySelector('.tabs [aria-selected="true"]')?.dataset.tab ?? null,
+    source: S.source ?? null, running: !!S.live?.running, playing: S.playing,
+    events: S.session?.events.length ?? 0, cursor: S.cursor,
+    scene: S.current?.scene ? { id: S.current.scene.id, title: S.current.scene.title, kind: S.current.scene.kind } : null,
+    clocks: Object.values(S.current?.clocks ?? {}).map((c) => ({ id: c.id, name: c.name, value: c.value, size: c.size })),
+    seat: S.human?.seat ?? null, yourTurn: !!S.human?.pending, ending: S.current?.ending ?? null,
+    calls: S.live?.calls ?? 0,
+  }),
+  sessions: () => S.manifest.map((m) => ({ ...m })),
+  load: (file) => { if (!sameOrigin(file)) throw new Error('load() takes a relative .json path on this site'); return openSessionFile(file); },
+  start: startRun,
+  stop: () => { $('#stopRun').click(); return LATENT.state(); },
+  request: reqOut,
+  /** The engine's verdict on an intent: dice pool, where each die came from, difficulty, problems. Spends nothing. */
+  preview: (intent) => { const p = S.human?.pending; if (!p) throw new Error('no open request'); if (p.req.kind !== 'act') throw new Error(`preview is for act requests; this one is "${p.req.kind}"`); return p.req.preview(intent ?? {}); },
+  reply: (reply) => { if (!S.human?.pending) throw new Error('no open request'); return answer(reply ?? {}); },
+  default: () => { const p = S.human?.pending; if (!p) throw new Error('no open request'); return answer(defaultReply(p.req)); },
+  /** Resolves at your next request, or null when the session ends. `ms` gives up and returns null. */
+  turn: (ms = 0) => new Promise((resolve) => {
+    if (S.human?.pending) return resolve(reqOut());
+    if (!S.live?.running) return resolve(null);
+    S.waiting.push((req) => resolve(req ? reqOut() : null));
+    if (ms > 0) setTimeout(() => resolve(null), ms);
+  }),
+  /** The log so far. Backstage (the GM's private branches) is withheld unless you ask: it is not yours. */
+  events: (from = 0, { backstage = false } = {}) => (S.session?.events ?? []).slice(from).map((e) => (backstage ? e : (({ backstage: _b, ...rest }) => rest)(e))),
+  review: () => (S.review ? { fitness: S.review.fitness, findings: S.review.findings, moments: S.review.moments?.map((m) => ({ rank: m.rank, title: m.title, start: m.start, end: m.end })) } : null),
+  /** Compose feedback into a pre-filled issue URL plus gh/curl commands. { open: true } opens the issue. */
+  suggest: (fields = {}, { open = false } = {}) => {
+    const c = composeSuggest({ who: 'agent', route: 'browser', ...suggestContext(), ...fields });
+    if (open) window.open(c.url, '_blank', 'noopener');
+    return c;
+  },
+};
+window.LATENT = LATENT;
+
+/** ?tab=live&seat=3&seed=night-7&start=scripted&session=sessions/fifth-light.json — one URL is a whole invitation. */
+async function fromUrl() {
+  const q = new URLSearchParams(location.search);
+  const tab = q.get('tab');
+  if (TABS.includes(tab)) setTab(tab);
+  const file = q.get('session');
+  if (file && sameOrigin(file)) await openSessionFile(file);
+  const start = q.get('start');
+  if (!start) return;
+  try { await startRun({ seat: q.get('seat'), seed: q.get('seed'), mode: start }); }
+  catch (err) { setTab('live'); $('#liveStatus').textContent = `Could not start from the URL: ${err.message}`; }
+}

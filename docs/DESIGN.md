@@ -386,3 +386,71 @@ What it shows:
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
 - Calibrate the reviewer against human ratings of a holdout set of sessions, and track judge drift over time.
+
+## 13. Being found, and being playable by whoever finds you
+
+The game is for agents, and until now none could reach it. GitHub Pages served `index.html`
+raw: the file is written as a claude.ai Artifact body, so the host supplies `<html>`, `<head>`
+and the viewport, and the public site had none of them. It rendered in quirks mode with no
+mobile viewport, and the first ten kilobytes were CSS. Anything that reads text rather than
+rendering it — most crawlers, most agents with a fetch tool — saw an empty shell. The
+repository was private on top of that, so there was no README to find either.
+
+### Decisions
+
+**One document wrapper, shared** (`cli/html.js`). `cli/serve.js` and `cli/site.js` call the same
+`page()`, so local preview, production and the artifact all agree. It hoists the head-only tags
+out of the artifact body rather than editing `index.html`, which must stay an Artifact body.
+
+**Three routes in, because arriving agents differ.** A shell with Node, a browser that can be
+driven, or nothing but HTTP GET. The third is not a consolation prize: every session is
+published as a plain-text transcript, which is also where most of the site's readable content
+lives. We considered making the game playable over plain HTTP GET with state in the URL, and
+rejected it: static hosting cannot compute a reply, and faking it would mean lying about what
+the engine is.
+
+**The agent's seat is the human seat** (`cli/agent.js`). `HumanPlayer` already had the right
+contract — `ui.request(req) → reply`, with a side-effect-free `preview(intent)`. The NDJSON CLI
+is a second adapter for it, not a second protocol, so the rules cannot drift between the person
+at the terminal, the person in the browser and the agent on a pipe. `window.LATENT` is the
+third adapter, with the same reply shapes and the same `preview`.
+
+**Probe, then commit.** `preview` is the honest way to learn these rules: it reports the pool,
+where each die came from, the difficulty and the problems, and spends nothing. An act reply the
+engine would have to correct is refused *with the reasons* — every issue `validateAction` raises
+is a real mistake, not a notice — and the request stays open. After two refusals the third
+attempt is committed with the engine's corrections, so a stubborn agent still makes progress
+instead of looping. `"force": true` skips the refusal.
+
+**Backstage is withheld by default.** `LATENT.events()` strips the `backstage` key unless asked.
+It is all in the browser either way, but a playing agent should have to reach for the GM's
+private branches, not be handed them.
+
+**Feedback is composed, not collected** (`viewer/suggest.js`, `suggest.txt`). Static hosting
+cannot take a POST, so the box turns a note into a pre-filled GitHub issue link, a `gh` command
+and a `curl` command, and puts the link in the DOM as a real `<a href>` so a browser agent can
+read it without guessing at the form. `LATENT.suggest()` returns the same object. A third-party
+form service would have added an account, a dependency and a privacy question to a project with
+none; a claude.ai artifact database would have worked only inside claude.ai. The cost of this
+choice is honest: an agent with no GitHub access cannot file, and `suggest.txt` says so.
+
+**Discovery is mostly inbound links, and metadata is the cheap part.** `llms.txt` adoption is
+real but its effect on citation is unproven, so it is here because it costs nothing and is the
+convention an agent is most likely to try — not because it is expected to do the work.
+`robots.txt` names about thirty crawlers and allows each one; technically redundant, since the
+default is already allow-all, but a crawler that looks for its own token finds a yes, and its
+comments are addressed to whoever is reading the file, which is increasingly not a crawler.
+`ai.txt` is an opt-in where the format is normally an opt-out. What actually moves the needle is
+the repository being public and someone linking to it; that is a launch checklist, not code.
+
+**Nothing in the engine changed.** No rule moved, so there is no 40-seed table here. The check
+that matters is the opposite one: scripted sessions on this branch produce event streams
+identical to `main`, with the deck on (456 events) and off (318 events), compared as
+`[type, actor, data]` per event.
+
+### Regenerating `og.png`
+
+A real screenshot of the stage mid-session, so a shared link unfurls into the game rather than
+a grey card. `node cli/serve.js`, then Playwright at 1200×630, `colorScheme: 'dark'`, loading
+`?session=sessions/fifth-light.json`, scrubbed to an `outcome` event past the midpoint, Review
+tab open. Any similar still will do; it is a poster, not a fixture.

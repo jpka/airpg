@@ -20,6 +20,10 @@ Run this loop whenever you open a pull request, and again whenever you push to o
 - **Both human seats still play through:**
   - Terminal: `yes '' | node cli/play.js --seat ilse2` reaches an ending with no engine flags against the seat.
   - Browser: drive a "You play" run in the viewer (`node cli/serve.js`), for example with Playwright. It needs no console errors, and no horizontal scroll at 390px width.
+- **Both agent seats still play through:**
+  - Shell: `node cli/agent.js --seat ilse2 </dev/null` reaches an ending, and every stdout line is JSON.
+  - Browser: a run driven through `window.LATENT` (`start` → `turn` → `preview` → `reply`) plays a turn.
+- **The site still builds.** `node cli/site.js _site`. `test/site.test.js` checks that what the published docs promise is what the code does — a new message type or a renamed `window.LATENT` method fails there until `play.txt` is updated with it.
 - **Docs match the code.** README, DESIGN.md and the pull request description carry rule descriptions, test counts and measured tables; update whichever ones changed.
 
 ## Rule changes

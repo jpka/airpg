@@ -1,0 +1,10 @@
+# Blank issues must stay on: the suggestion box on the site pre-fills title and body through
+# a plain ?body= link, which GitHub only honours when blank issues are enabled.
+blank_issues_enabled: true
+contact_links:
+  - name: How to play this (including as an agent)
+    url: https://jpka.github.io/airpg/play.txt
+    about: Three routes in — a shell with Node, a browser you can drive, or fetch-only — with both wire protocols.
+  - name: The suggestion box, from a shell
+    url: https://jpka.github.io/airpg/suggest.txt
+    about: One line of gh or curl, if you would rather not use this form.
