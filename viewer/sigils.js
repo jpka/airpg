@@ -95,3 +95,30 @@ export function ringClock(value, size, d = 40, done = false) {
   if (done) parts.push(`<circle cx="${c}" cy="${c}" r="${r0 - 3}" class="seg on"/>`);
   return `<svg viewBox="0 0 ${d} ${d}" width="${d}" height="${d}" aria-hidden="true">${parts.join('')}</svg>`;
 }
+
+// Card pips: one glyph per card type, so a card reads as a card — the suit in the
+// corner, mirrored bottom-right the way a playing card repeats its index.
+// Colour comes from the card's `--kc` (how the card plays), the glyph says what it is.
+const PIPS = {
+  skill: '<path d="M12 3 L20 20 L12 15.4 L4 20 Z"/>',
+  knack: '<path d="M12 2 L13.9 10.1 L22 12 L13.9 13.9 L12 22 L10.1 13.9 L2 12 L10.1 10.1 Z"/>',
+  domain: '<path d="M12 2.6 L20.1 7.3 V16.7 L12 21.4 L3.9 16.7 V7.3 Z" fill="none" stroke="currentColor" stroke-width="1.7"/>',
+  memory: '<path d="M15.6 7.6 A5.6 5.6 0 1 0 17 13.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="12" cy="12" r="2.1"/>',
+  drive: '<path d="M12 2.5 L15.4 12 L12 21.5 L8.6 12 Z"/><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".55"/>',
+  flaw: '<path d="M13.6 2.6 L9.2 10.6 L13.9 12.4 L8.2 21.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>',
+  calling: '<circle cx="12" cy="12" r="5.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 1.6 V5 M12 19 V22.4 M1.6 12 H5 M19 12 H22.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+  guard: '<path d="M12 2.4 L20 5.6 V12 c0 5.2-4 7.8-8 9.6 -4-1.8-8-4.4-8-9.6 V5.6 Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>',
+  resolve: '<path d="M12 1.8 c3.2 5 6.2 6.4 6.2 10.4 a6.2 6.2 0 0 1-12.4 0 c0-2.2 1.6-3.8 3.2-5.4 .5 2.2 1.6 2.6 2 1.9 .6-1.1 .6-4 1-6.9 Z"/>',
+  gift: '<path d="M7.4 3.6 H16.6 L21 9.4 L12 20.8 L3 9.4 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 9.4 H21 M7.4 3.6 L12 20.8 L16.6 3.6" fill="none" stroke="currentColor" stroke-width="1.1" opacity=".6"/>',
+  insight: '<path d="M1.8 12 S6 5.4 12 5.4 22.2 12 22.2 12 18 18.6 12 18.6 1.8 12 1.8 12 Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.6"/>',
+  condition: '<circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M6.1 17.9 L17.9 6.1" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>',
+  compel: '<path d="M15.2 2.6 V13 a4.2 4.2 0 1 1-8.4 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M11.8 5.6 L15.2 2.2 L18.6 5.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/>',
+  gap: '<circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-dasharray="3.2 3.4"/>',
+  voice: '<path d="M2.4 12 q2.4-7.4 4.8 0 t4.8 0 t4.8 0 t4.8 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+};
+
+/** The suit glyph for a card type (falls back to a plain lozenge). */
+export function cardPip(type, cls = 'ck-pip') {
+  const body = PIPS[type] ?? '<path d="M12 2.8 L19 12 L12 21.2 L5 12 Z" fill="none" stroke="currentColor" stroke-width="1.7"/>';
+  return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${body}</svg>`;
+}

@@ -99,7 +99,7 @@ src/agents/     llm.js (providers) · prompts.js (GM agenda/principles/moves, pl
 src/runner/     session.js (the game loop) · factory.js (config → agents)
 src/reviewer/   review.js (metrics, findings, moments) · curves.js (tension/affect, arc shapes) · report.js · judge.js (LLM judge, pairwise)
 src/explorer/   mapelites.js (rule-space search, optional LLM mutation)
-viewer/         app.js (spectator UI, and window.LATENT for agents driving the page) · seat.js (the human seat's card table) · suggest.js (the suggestion box) · sigils.js (procedural portraits, clocks, light-cone glyphs)
+viewer/         app.js (spectator UI, and window.LATENT for agents driving the page) · seat.js (the human seat's card table) · suggest.js (the suggestion box) · sigils.js (procedural portraits, clocks, light-cone glyphs, card pips)
 index.html      the viewer page (also published as a claude.ai artifact)
 cli/            run · play (a human seat in the terminal) · agent (a seat for an agent, over JSON) · review · explore · bridge · serve · compare · measure · site (build the public site) · html (the document wrapper, shared by serve and site)
 docs/DESIGN.md  system + narrative design, and how each piece maps to its sources

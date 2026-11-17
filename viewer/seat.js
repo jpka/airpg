@@ -2,7 +2,7 @@
 // (intro · act · fallout · epilogue) into `el` and calls onSubmit(reply) once, with
 // the same JSON shape an LLM player returns. Text inputs are rendered once per
 // request; only cards, follow-ups and the dice preview refresh as you choose.
-import { sigil, coneGlyph } from './sigils.js';
+import { sigil, coneGlyph, cardPip } from './sigils.js';
 import { SKILLS, RESISTANCES } from '../src/engine/rules.js';
 import { jaccard } from '../src/engine/core.js';
 
@@ -17,9 +17,11 @@ export function cardHtml(k, { pressed = false, disabled = false, warn = false, a
   if (k.type === 'memory') extra = `“${esc(k.memoryText)}”${k.invokedThisScene ? ' <b>(already invoked this scene)</b>' : ''}`;
   if (k.type === 'drive' && k.disposition) extra = `Your inclination: ${esc(k.disposition)}`;
   if (k.type === 'domain' && k.here !== undefined) extra = k.here ? '<b class="ok">✓ helps here</b>' : '<b class="no">✗ not here</b>';
+  const label = k.type === 'knack' ? 'Knack' : k.type === 'flaw' ? 'Flaw' : k.type === 'drive' ? 'Drive' : KIND[k.kind] ?? k.kind;
   return `<button type="button" class="card-k kind-${k.kind} t-${k.type}${warn ? ' warn' : ''}" aria-pressed="${pressed}" ${disabled ? 'disabled' : ''} ${attr} title="${esc(k.text)}">
-    <span class="ck-top"><span>${esc(k.type === 'knack' ? 'Knack' : k.type === 'flaw' ? 'Flaw' : k.type === 'drive' ? 'Drive' : KIND[k.kind] ?? k.kind)}</span><span class="ck-bonus">${esc(bonus)}</span></span>
-    <span class="ck-name">${esc(k.name)}</span><span class="ck-text">${esc(k.text)}</span>${extra ? `<span class="ck-extra">${extra}</span>` : ''}</button>`;
+    <span class="ck-top"><span class="ck-kind">${cardPip(k.type)}${esc(label)}</span><span class="ck-bonus">${esc(bonus)}</span></span>
+    <span class="ck-name">${esc(k.name)}</span><span class="ck-text">${esc(k.text)}</span>${extra ? `<span class="ck-extra">${extra}</span>` : ''}
+    <span class="ck-mark">${cardPip(k.type, 'ck-mark-svg')}</span><span class="ck-foot">${cardPip(k.type)}</span></button>`;
 }
 
 function head(req, title) {
@@ -116,7 +118,8 @@ function mountAct(el, req, done) {
     const pd = p.deck ?? {};
     const allowed = pd.allowed ?? d.edgesAllowed;
     const edgesChosen = sel().filter((k) => k.kind === 'edge').length;
-    el.querySelector('[data-edges]').textContent = `${hand.length} cards · Move: ${moveSel() ? moveSel().name : 'none'} · Edges ${edgesChosen}/${allowed}`;
+    el.querySelector('[data-edges]').textContent = '';
+    el.querySelector('[data-edges]').innerHTML = `${hand.length} cards · <span style="white-space:nowrap">Move: ${esc(moveSel() ? moveSel().name : 'none')}</span> · <span style="white-space:nowrap">Edges ${edgesChosen}/${allowed}</span>`;
     el.querySelector('[data-hand]').innerHTML = hand.map((k) => {
       const on = s.play.has(k.uid);
       const full = !on && k.kind === 'edge' && edgesChosen >= allowed && k.type !== 'memory' && !(k.focus < 0); // a slot-costing flaw frees its own slot
@@ -182,10 +185,10 @@ function mountIntro(el, req, done) {
     <p class="note">${esc(y.pitch)}</p>
     <div class="k">Calling · ${esc(cal.name)}</div><p>${esc(cal.blurb)}</p>
     <div class="k">Choose two beats: the GM must open doors for them; hitting one earns a card</div>
-    <div class="hand-grid">${beats.map((b) => `<button type="button" class="card-k kind-${b.tier === 'major' ? 'move' : 'edge'}" data-beat="${esc(b.id)}" aria-pressed="${chosen.has(b.id)}"><span class="ck-top"><span>${esc(b.tier)} beat</span><span class="ck-bonus">${b.tier === 'major' ? 'cone + draft' : 'Resolve'}</span></span><span class="ck-text">${esc(b.text)}</span></button>`).join('')}</div>
+    <div class="hand-grid">${beats.map((b) => `<button type="button" class="card-k kind-${b.tier === 'major' ? 'move' : 'edge'} t-${b.tier === 'major' ? 'calling' : 'resolve'}" data-beat="${esc(b.id)}" aria-pressed="${chosen.has(b.id)}"><span class="ck-top"><span class="ck-kind">${cardPip(b.tier === 'major' ? 'calling' : 'resolve')}${esc(b.tier)} beat</span><span class="ck-bonus">${b.tier === 'major' ? 'cone + draft' : 'Resolve'}</span></span><span class="ck-text">${esc(b.text)}</span><span class="ck-mark">${cardPip(b.tier === 'major' ? 'calling' : 'resolve', 'ck-mark-svg')}</span><span class="ck-foot">${cardPip(b.tier === 'major' ? 'calling' : 'resolve')}</span></button>`).join('')}</div>
     <label>Introduce yourself to the audience (two sentences, in your voice)<textarea data-f="text" rows="3" placeholder="${esc(y.voice ?? '')}"></textarea></label>
     <label>What you privately hope happens to you tonight (backstage)<input data-f="intent"></label>
-    ${deck.length ? `<details class="deck-list"><summary class="k">Your deck · ${deck.length} cards (it is who you are)</summary><div class="minis">${deck.map((k) => `<span class="mini kind-${k.kind} t-${k.type}"><span class="n">${esc(k.name)}</span></span>`).join('')}</div></details>` : ''}
+    ${deck.length ? `<details class="deck-list"><summary class="k">Your deck · ${deck.length} cards (it is who you are)</summary><div class="minis">${deck.map((k) => `<span class="mini kind-${k.kind} t-${k.type}" title="${esc(k.text)}"><span class="b">${cardPip(k.type, 'mini-pip')}</span><span class="n">${esc(k.name)}</span></span>`).join('')}</div></details>` : ''}
     <div class="row"><button type="button" class="btn primary" data-go>Take your seat</button></div>`;
   const sync = () => el.querySelectorAll('[data-beat]').forEach((b) => b.setAttribute('aria-pressed', String(chosen.has(b.dataset.beat))));
   el.addEventListener('click', (ev) => {
@@ -203,7 +206,7 @@ function mountFallout(el, req, done) {
   let pick = y.memories[0]?.id;
   el.innerHTML = `${head(req, rewrite ? 'Fallout · Confabulation' : 'Fallout · Erasure')}
     <p>${rewrite ? 'A memory rewrites itself to fit what just happened. Choose which, and write it as you now remember it.' : 'A memory is taken. You choose which; its card leaves your deck and a Gap takes its place.'}</p>
-    <div class="hand-grid">${y.memories.map((m) => `<button type="button" class="card-k kind-edge t-memory" data-mem="${esc(m.id)}" aria-pressed="${m.id === pick}"><span class="ck-top"><span>Memory</span><span class="ck-bonus">${esc(m.id)}</span></span><span class="ck-text">${esc(m.text)}</span></button>`).join('')}</div>
+    <div class="hand-grid">${y.memories.map((m) => `<button type="button" class="card-k kind-edge t-memory" data-mem="${esc(m.id)}" aria-pressed="${m.id === pick}"><span class="ck-top"><span class="ck-kind">${cardPip('memory')}Memory</span><span class="ck-bonus">${esc(m.id)}</span></span><span class="ck-text">${esc(m.text)}</span><span class="ck-mark">${cardPip('memory', 'ck-mark-svg')}</span><span class="ck-foot">${cardPip('memory')}</span></button>`).join('')}</div>
     <label>${rewrite ? 'As you now remember it' : 'What you say as it goes'}<textarea data-f="text" rows="2"></textarea></label>
     <div class="row"><button type="button" class="btn primary" data-go>${rewrite ? 'Rewrite' : 'Let it go'}</button></div>`;
   const ta = el.querySelector('[data-f=text]');
