@@ -378,9 +378,18 @@ BASE="\${BASE:-${BASE}}"
 DIR="\${1:-latent}"
 FILES='${kit.join(' ')}'
 command -v curl >/dev/null 2>&1 || { echo "kit.sh needs curl" >&2; exit 1; }
+# --retry covers what a static host actually does under a burst of 38 requests: timeouts and
+# HTTP 408, 429, 500, 502, 503, 504, 522, 524. Not a refused connection — that needs
+# --retry-connrefused, which old curl rejects as an unknown option and so would fail the whole
+# kit rather than one file. Without any retry a single hiccup aborts under "set -e" and leaves
+# half a kit and no useful message, which is a poor welcome for an agent running one command
+# it found on a web page.
 for f in $FILES; do
   mkdir -p "$DIR/$(dirname "$f")"
-  curl -fsS "$BASE$f" -o "$DIR/$f"
+  curl -fsS --retry 3 --retry-delay 2 "$BASE$f" -o "$DIR/$f" || {
+    echo "kit.sh: could not fetch $f (after 3 retries). The file list and its sha256 are at ${abs('files.json')} ; nothing was removed, so you can re-run this." >&2
+    exit 1
+  }
 done
 echo "LATENT kit in $DIR/ (${kit.length} files)."
 echo "Play a seat:  node $DIR/cli/agent.js --seat ilse2"

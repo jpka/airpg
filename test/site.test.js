@@ -8,7 +8,7 @@ import { rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, execFile } from 'node:child_process';
 
 const repo = new URL('..', import.meta.url).pathname; // not import.meta.dirname: package.json says node >= 20, that wants 20.11
 const out = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-site-'));
@@ -175,6 +175,34 @@ test('the request timeout cannot resolve a request that is already gone', async 
   assert.match(timer, /queue = queue\.then/, 'the timeout must share the queue with the input lines');
   assert.match(timer, /if \(pending\?\.id === id\) commit\(reply\)/, 'and re-check after awaiting the fallback');
   assert.match(cli, /const commit = \(reply\) => \{ const p = pending; if \(!p\) return false;/, 'commit must be a no-op on an already-answered request');
+});
+
+test('kit.sh survives a transient failure from the host', async () => {
+  // Found in production: one file of the 38 came back 503, and `set -e` aborted the whole
+  // fetch, leaving half a kit and no useful message. Costs ~2s for curl's retry delay, which
+  // is worth it for the one command an agent that found this on a web page actually runs.
+  const http = await import('node:http');
+  let refused = false;
+  const server = http.createServer((req, res) => {
+    const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\//, '');
+    if (!refused && rel.endsWith('.js')) { refused = true; res.writeHead(503); return res.end('nope'); }
+    fs.readFile(path.join(repo, rel)).then((b) => { res.writeHead(200); res.end(b); }, () => { res.writeHead(404); res.end(); });
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'latent-kit-'));
+  try {
+    // Not execFileSync: it blocks this process's event loop, and the server curl is talking
+    // to lives in it, so the two would wait on each other for ever.
+    await new Promise((resolve, reject) => {
+      execFile('sh', [path.join(out, 'kit.sh'), 'latent'], { cwd: dir, env: { ...process.env, BASE: `http://127.0.0.1:${server.address().port}/`, NO_PROXY: '127.0.0.1', no_proxy: '127.0.0.1' } }, (err, _o, stderr) => (err ? reject(new Error(`kit.sh failed: ${stderr || err.message}`)) : resolve()));
+    });
+    assert.ok(refused, 'the server was supposed to refuse once');
+    const { files } = JSON.parse(await read('files.json'));
+    for (const f of files) assert.ok(await fs.stat(path.join(dir, 'latent', f.path)).catch(() => null), `${f.path} is missing from the kit`);
+  } finally {
+    server.close();
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });
 
 // ---------------------------------------------------------------- the suggestion box

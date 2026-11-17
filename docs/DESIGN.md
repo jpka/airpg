@@ -516,6 +516,13 @@ The design calls it raised, decided:
   client that is still there, and it can hold a turn open indefinitely. That is the intended
   reading — the deadline is for silence, not for uselessness — and a run can always be stopped
   from the outside.
+- **`kit.sh` retries, but does not pass `--retry-connrefused`.** Running the published command
+  against the live site minutes after the first deploy, one of the 38 files came back 503 and
+  `set -e` aborted the fetch at file 12, leaving half a kit. Plain `--retry` covers what a
+  static host does under a burst — timeouts and HTTP 408, 429, 500, 502, 503, 504, 522, 524 —
+  which includes what was actually seen. A refused connection needs a separate flag that older
+  curl rejects as an unknown option, failing the whole kit instead of one file; retrying a
+  hypothetical is not worth breaking the route for anyone on an old curl.
 - **No session file unless you ask** (`--out`). The default wrote into whatever directory an agent
   ran from, which in a clone is the tracked `sessions/`. Every event is already on stdout.
 - **The feedback labels now exist** (`agent-feedback`, plus one per category). `gh issue create
