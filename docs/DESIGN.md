@@ -86,7 +86,7 @@ The planned campaign arc follows Heart's guidance of roughly eight linked sessio
   - *Kept, with its cost:* on a 320×568 stage, or a 440×520 pane, the overlay is down to a line or two, scrollable with the scrollbar hidden, so only the fade says there is more. The room would have to come from the speaker's name or the party strip, and both carry more at a glance than a third line of stakes.
 
   - *Kept:* the focus's mask makes it a backdrop root, so the overlay's `backdrop-filter` blurs the focus's own content instead of the field behind it. Rendered both ways at 390×844, the panel is indistinguishable — it is 88% opaque, so the blur was never carrying the look.
-  - *Kept:* the caption's and the overlay's fade masks are unconditional. Each element's bottom padding is larger than its fade, so content that fits is not faded, and a JS overflow toggle would buy nothing.
+  - *Kept:* the caption's and the overlay's fade masks are unconditional. Each element's bottom padding is at least its fade, so content that fits is not faded, and a JS overflow toggle would buy nothing. That invariant has to hold in every variant: a `padding` shorthand after the `padding-bottom` once quietly cut the overlay's to 10px under a 14px fade, and on a very short stage the fade shrinks to 8px rather than the padding growing, because height there is scarcer than the fade is worth.
 
 ## 7. Reviewer
 
