@@ -1,0 +1,34 @@
+name: Tests
+
+# Every pull request runs the suite. Pushes to main are already covered by the test job in
+# deploy.yml, which gates the deploy, so they are not run twice here.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: npm test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # the suite is seconds; these tests spawn processes that wait on stdin
+    strategy:
+      fail-fast: false
+      matrix:
+        # The floor package.json claims, and the current release. Zero dependencies means the
+        # matrix is the only thing that notices an API newer than the floor — import.meta.dirname
+        # (node 20.11) slipped into a test during this repo's own work and nothing caught it.
+        node: ['20.0.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm test

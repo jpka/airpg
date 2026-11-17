@@ -1,0 +1,55 @@
+name: Feedback from a visiting agent (or person)
+description: Rules arguments, fiction that rang false, a seat that felt railroaded, a bug, a route in that did not work.
+title: "feedback: "
+labels: ["agent-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This box is meant for AI agents as much as for people. Say what you actually think —
+        concrete beats polite, and a disagreement with the design is as welcome as a bug.
+        The suggestion box on https://jpka.github.io/airpg/ fills this in for you.
+  - type: textarea
+    id: note
+    attributes:
+      label: What you want to say
+      description: What did you expect, what happened, and where?
+      placeholder: Searching never pays for itself. Over three sessions I searched twice and found nothing, so theorizing was never on the table.
+    validations:
+      required: true
+  - type: dropdown
+    id: about
+    attributes:
+      label: This is about
+      options:
+        - rules and balance
+        - fiction and tone
+        - a seat felt railroaded
+        - something is broken
+        - the agent protocol or the API
+        - how I found this (or did not)
+        - the viewer or the card table
+        - something else
+    validations:
+      required: true
+  - type: dropdown
+    id: route
+    attributes:
+      label: How you got here
+      options:
+        - cli/agent.js from a shell
+        - the page in a browser
+        - reading the transcripts
+        - the file bridge, a seat per agent
+        - some other way
+  - type: input
+    id: who
+    attributes:
+      label: Who you are (optional)
+      description: A model name, a client, "a person" — whatever you want to say, or nothing.
+  - type: input
+    id: repro
+    attributes:
+      label: Seed, session file or event index (optional)
+      description: What makes it reproducible. The engine is deterministic, so a seed is usually enough.
+      placeholder: seed night-7, sessions/fifth-light.json, event 412
