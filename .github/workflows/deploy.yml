@@ -37,11 +37,11 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v4
-      - name: Stage the viewer
-        run: |
-          mkdir _site
-          cp -r index.html viewer src sessions _site/
-          touch _site/.nojekyll
+      - name: Build the site
+        # cli/site.js wraps the viewer in a real document and writes the text surfaces an
+        # agent looks for: llms.txt, play.txt, agents.json, robots.txt, a sitemap, a
+        # transcript per session, and a kit it can download and run.
+        run: node cli/site.js _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

@@ -386,3 +386,146 @@ What it shows:
 - No voice or TTS yet. The event log already carries everything a TTS track or an auto-editor needs.
 - Next content: two more one-shots (a Swarm city; an obsolete-platform Ruin) and the campaign layer (persistent Ingression, tiers, zeniths).
 - Calibrate the reviewer against human ratings of a holdout set of sessions, and track judge drift over time.
+
+## 13. Being found, and being playable by whoever finds you
+
+The game is for agents, and until now none could reach it. GitHub Pages served `index.html`
+raw: the file is written as a claude.ai Artifact body, so the host supplies `<html>`, `<head>`
+and the viewport, and the public site had none of them. It rendered in quirks mode with no
+mobile viewport, and the first ten kilobytes were CSS. Anything that reads text rather than
+rendering it — most crawlers, most agents with a fetch tool — saw an empty shell. The
+repository was private on top of that, so there was no README to find either.
+
+### Decisions
+
+**One document wrapper, shared** (`cli/html.js`). `cli/serve.js` and `cli/site.js` call the same
+`page()`, so local preview, production and the artifact all agree. It hoists the head-only tags
+out of the artifact body rather than editing `index.html`, which must stay an Artifact body.
+
+**Three routes in, because arriving agents differ.** A shell with Node, a browser that can be
+driven, or nothing but HTTP GET. The third is not a consolation prize: every session is
+published as a plain-text transcript, which is also where most of the site's readable content
+lives. We considered making the game playable over plain HTTP GET with state in the URL, and
+rejected it: static hosting cannot compute a reply, and faking it would mean lying about what
+the engine is.
+
+**The agent's seat is the human seat** (`cli/agent.js`). `HumanPlayer` already had the right
+contract — `ui.request(req) → reply`, with a side-effect-free `preview(intent)`. The NDJSON CLI
+is a second adapter for it, not a second protocol, so the rules cannot drift between the person
+at the terminal, the person in the browser and the agent on a pipe. `window.LATENT` is the
+third adapter, with the same reply shapes and the same `preview`.
+
+**Probe, then commit.** `preview` is the honest way to learn these rules: it reports the pool,
+where each die came from, the difficulty and the problems, and spends nothing. An act reply the
+engine would have to correct is refused *with the reasons* — every issue `validateAction` raises
+is a real mistake, not a notice — and the request stays open. After two refusals the third
+attempt is committed with the engine's corrections, so a stubborn agent still makes progress
+instead of looping. `"force": true` skips the refusal.
+
+**Backstage is withheld by default.** `LATENT.events()` strips the `backstage` key unless asked.
+It is all in the browser either way, but a playing agent should have to reach for the GM's
+private branches, not be handed them.
+
+**Feedback is composed, not collected** (`viewer/suggest.js`, `suggest.txt`). Static hosting
+cannot take a POST, so the box turns a note into a pre-filled GitHub issue link, a `gh` command
+and a `curl` command, and puts the link in the DOM as a real `<a href>` so a browser agent can
+read it without guessing at the form. `LATENT.suggest()` returns the same object. A third-party
+form service would have added an account, a dependency and a privacy question to a project with
+none; a claude.ai artifact database would have worked only inside claude.ai. The cost of this
+choice is honest: an agent with no GitHub access cannot file, and `suggest.txt` says so.
+
+**Discovery is mostly inbound links, and metadata is the cheap part.** `llms.txt` adoption is
+real but its effect on citation is unproven, so it is here because it costs nothing and is the
+convention an agent is most likely to try — not because it is expected to do the work.
+`robots.txt` names about thirty crawlers and allows each one; technically redundant, since the
+default is already allow-all, but a crawler that looks for its own token finds a yes, and its
+comments are addressed to whoever is reading the file, which is increasingly not a crawler.
+`ai.txt` is an opt-in where the format is normally an opt-out.
+
+**The site is at a subpath, and two of those files want the domain root.** Crawlers fetch
+`/robots.txt` from the origin, not from `/airpg/robots.txt`, and the same is true of the
+convention for `llms.txt`. `https://jpka.github.io/robots.txt` is a 404 today — which is
+permissive, so nothing is blocked, but it means our `Sitemap:` line is never seen by a crawler
+that has not already been pointed here, and the robots file we ship is read only by an agent
+that fetches it on purpose. The per-page `<meta name="robots">` carries the allow signal
+instead, because that one is read where it sits. The real fix is a custom domain on this
+repository, or a `jpka.github.io` user site serving a root `robots.txt` with a `Sitemap:` line
+pointing at `/airpg/sitemap.xml`; until then the sitemap has to be submitted by hand. Worth
+knowing rather than quietly leaving a file that looks like it is working.
+
+What actually moves the needle is the repository being public and someone linking to it; that
+is a launch checklist, not code.
+
+**Nothing in the engine changed.** No rule moved, so there is no 40-seed table here. The check
+that matters is the opposite one: scripted sessions on this branch produce event streams
+identical to `main`, compared as `[type, actor, data]` per event, ignoring `rules` in
+`session.start` — seed `parity-2` with the deck on (456 events, 0 differing) and seed
+`parity-1` with `deck.enabled: false` (318 events, 0 differing). `git diff main -- src` is
+empty, which is the real guarantee; the runs are the check on that claim.
+
+### Review decisions
+
+Three independent reviews ran over this change; the first two found eleven bugs, the third
+found none. Every bug is fixed with a regression test, and each test was checked by reverting
+its fix and watching it fail. Be precise about what those tests are worth, because the browser
+is not in `npm test` (zero dependencies) and four of them read `viewer/app.js` or
+`cli/agent.js` as text:
+
+- **Behavioural:** the origin predicate is lifted out of `app.js` with `new Function` and run
+  against a stub `location`. A regex over the source would pass with the check deleted into a
+  comment — which is exactly how the second review showed the first version of it was worthless.
+- **Source checks, and they can only be that here:** the boot order, the browser's force path,
+  and the timeout queue. Each fails when its fix is reverted, and each could be satisfied by
+  code that merely looks right. The boot-order scan walks top-level `const`/`let` below the boot
+  call; it does not see a destructured binding or one reached through a helper. Treat them as
+  tripwires on a known mistake, not proof. The behaviour behind all three is covered by the
+  browser run in the pre-push checklist.
+The design calls it raised, decided:
+
+- **A request now waits 1800 seconds, not for ever** (`--timeout`, 0 to disable). §12 notes that
+  a person at the browser seat waits indefinitely, and that is right for a person. An agent is a
+  different risk: stdin staying open is no promise that anyone is still reading, so a wedged
+  client would have hung the process with no session to show for it. The scripted player takes
+  the turn and the game finishes. 1800 is the file bridge's own timeout.
+- **`LATENT.reply()` refuses what the shell route refuses.** It used to hand anything straight to
+  the engine, which silently corrected it — so the two routes disagreed about the same reply, and
+  §13's "same reply shapes" was not quite true. It now previews, throws with the reasons, and
+  takes `{ force: true }`. It also takes `{ id }`, because a reply that arrives after a timeout
+  would otherwise answer the *next* turn.
+- **`turn(ms)` returns `null` both when the session is over and when it timed out.** A sentinel
+  for the second case would make the documented loop (`if (!r) break`) wrong in a quieter way.
+  `state().running` tells them apart, and play.txt says so.
+- **`LATENT.events()` is the spectator's log, not your light cone.** It shows other seats' draws
+  and offers; the NDJSON route does not. Filtering it would make the spectator API lie about the
+  session it is replaying, and this is the spectator surface — the viewer's own Ledger tab shows
+  every seat's deck to anyone watching. So: documented, not filtered. `backstage` stays withheld
+  by default, because the GM's unplayed branches are not part of the performance.
+- **The timeout shares the input queue, and the fallback must stay synchronous.** The timer
+  computes the scripted reply and then commits it. If a reply arrived in between, the commit
+  would resolve a request that no longer exists. It cannot today — `MockPlayer` resolves within
+  a microtask, so a stdin line never interleaves — but give the fallback 40ms of I/O and the
+  unqueued version dies on `Cannot read properties of null`. The timeout runs on the same queue
+  as the input lines, re-checks after awaiting, and `commit` is a no-op on an already-answered
+  request. Worth knowing for whoever makes the fallback a real agent.
+- **The deadline is about nobody reading, not about taking your time.** It restarts on any line
+  about the open request — a preview probe, a refused reply — so an agent thinking carefully
+  through five previews keeps its turn, while one that has stopped answering loses it. A value
+  larger than a 32-bit millisecond timer can hold is treated as "for ever" rather than silently
+  firing after 1ms with an error line claiming it waited a month. Note what this does *not*
+  catch: a client that keeps previewing, or keeps sending replies the engine refuses, is a
+  client that is still there, and it can hold a turn open indefinitely. That is the intended
+  reading — the deadline is for silence, not for uselessness — and a run can always be stopped
+  from the outside.
+- **No session file unless you ask** (`--out`). The default wrote into whatever directory an agent
+  ran from, which in a clone is the tracked `sessions/`. Every event is already on stdout.
+- **The feedback labels now exist** (`agent-feedback`, plus one per category). `gh issue create
+  --label X` fails when X does not exist, so the command the site publishes was broken as
+  published. The category select defaults to `other` rather than `rules`, so an uncategorised
+  note is not filed as a balance complaint.
+
+### Regenerating `og.png`
+
+A real screenshot of the stage mid-session, so a shared link unfurls into the game rather than
+a grey card. `node cli/serve.js`, then Playwright at 1200×630, `colorScheme: 'dark'`, loading
+`?session=sessions/fifth-light.json`, scrubbed to an `outcome` event past the midpoint, Review
+tab open. Any similar still will do; it is a poster, not a fixture.
